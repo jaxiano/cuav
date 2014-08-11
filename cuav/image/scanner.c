@@ -1350,12 +1350,24 @@ scanner_jpeg_compress(PyObject *self, PyObject *args)
 	}
 	const uint16_t w = PyArray_DIM(img_in, 1);
 	const uint16_t h = PyArray_DIM(img_in, 0);
-	const struct bgr *bgr_in = PyArray_DATA(img_in);
+	//const struct bgr *bgr_in = PyArray_DATA(img_in);
 
 	struct jpeg_compress_struct cinfo;
 	struct jpeg_error_mgr jerr;
 	unsigned char *dest = NULL;
 	unsigned long dest_size = 0;
+
+	struct bgr_image *rgb = allocate_bgr_image8(h, w, NULL);
+	struct bgr_image *image = allocate_bgr_image8(h, w, PyArray_DATA(img_in));
+	uint16_t x, y;
+	for(y=0; y<rgb->height; y++){
+		for(x=0;x<rgb->width; x++){
+			rgb->data[y][x].r = image->data[y][x].b;
+			rgb->data[y][x].g = image->data[y][x].g;
+			rgb->data[y][x].b = image->data[y][x].r;
+		}
+	}
+	const struct bgr *bgr_in = &rgb->data[0][0];
 
 	Py_BEGIN_ALLOW_THREADS;
 	cinfo.err = jpeg_std_error(&jerr);
