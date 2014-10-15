@@ -29,6 +29,12 @@ else:
                           extra_compile_args=extra_compile_args + ['-O0'])
     ext_modules.append(chameleon)
 
+    flea = Extension('cuav.camera.flea',
+                          sources = ['cuav/camera/flea_py.c',
+                                     'cuav/camera/flea_lib.c'],
+                          libraries = ['flycapture-c'])
+                          #,extra_compile_args=extra_compile_args + ['-o flea.so'])
+    ext_modules.append(flea)
  
 scanner = Extension('cuav.image.scanner',
                     sources = ['cuav/image/scanner.c', 'cuav/image/imageutil.c'],
@@ -59,7 +65,9 @@ setup (name = 'cuav',
        license='GPLv3',
        include_dirs = [np.get_include(),
                        jpegturbo_incpath,
-                       'cuav/camera/include'],
+                       'cuav/camera/include',
+#                       'cuav/camera/flea/include',
+                       '/usr/include/flycapture'],
        packages = ['cuav', 'cuav.lib', 'cuav.image', 'cuav.camera', 'cuav.uav', 'cuav.modules'],
        scripts = [ 'cuav/tools/geosearch.py', 'cuav/tools/geotag.py',
                    'cuav/tools/cuav_lens.py', 'cuav/tools/agl_mission.py',
@@ -69,3 +77,6 @@ setup (name = 'cuav',
                                    'data/chameleon1_arecont0.json',
                                    'camera/include/*.h']},
        ext_modules = ext_modules)
+       
+       
+       
