@@ -26,8 +26,10 @@ from MAVProxy.modules.mavproxy_map import mp_slipmap
 if os.getenv('FAKE_CHAMELEON'):
     print("Loaded fake chameleon backend")
     import cuav.camera.fake_chameleon as chameleon
+    #import cuav.camera.flea.flea as chameleon
 else:
-    import cuav.camera.chameleon as chameleon
+    import cuav.camera.flea as chameleon
+    #import cuav.camera.chameleon as chameleon
 
 class MavSocket:
     '''map block_xmit onto MAVLink data packets'''
@@ -418,7 +420,9 @@ class CameraModule(mp_module.MPModule):
         last_successful_capture = None
 
         while not self.unload_event.wait(0.02):
+            print("In capture loop")
             if not self.running:            
+                print("Not running")
                 if h is not None:
                     chameleon.close(h)
                     h = None
@@ -436,7 +440,7 @@ class CameraModule(mp_module.MPModule):
                     h, base_time, last_frame_time = self.get_base_time()
                     last_capture_frame_time = last_frame_time
                     # put into continuous mode
-                    chameleon.trigger(h, True)
+                chameleon.trigger(h, True)
 
                 if self.camera_settings.depth == 16:
                     im = numpy.zeros((960,1280),dtype='uint16')
@@ -454,7 +458,9 @@ class CameraModule(mp_module.MPModule):
                 capture_time = time.time()
                 
                 # capture an image
+                print("Capturing an image...")
                 frame_time, frame_counter, shutter = chameleon.capture(h, 1000, im)
+                print("Returned from capturing")
                 if frame_time < last_capture_frame_time:
                     base_time += 128
                 last_capture_frame_time = frame_time
@@ -468,6 +474,7 @@ class CameraModule(mp_module.MPModule):
                 # discard based on process_divider setting
                 self.process_counter += 1
                 if self.process_counter % self.camera_settings.process_divider != 0:
+                    print("discarded based on process divider setting")
                     continue
                 
                 if self.camera_settings.use_capture_time:
@@ -475,6 +482,7 @@ class CameraModule(mp_module.MPModule):
                 else:
                     img_time = base_time + frame_time
 
+                print("writing to the gamma log")
                 gammalog.write('%f %f %f %s %u %u\n' % (frame_time,
                                                         frame_time+base_time,
                                                         capture_time,
@@ -493,10 +501,13 @@ class CameraModule(mp_module.MPModule):
                 last_frame_time = frame_time
                 last_frame_counter = frame_counter
             except chameleon.error, msg:
+                print("Exception in capture thread: " + msg)
                 self.error_count += 1
                 self.error_msg = msg
         if h is not None:
             chameleon.close(h)
+        print("Exiting capture thread")
+
 
     def save_thread(self):
         '''image save thread'''
@@ -506,12 +517,14 @@ class CameraModule(mp_module.MPModule):
         while not self.unload_event.wait(0.02):
             if self.save_queue.empty():
                 continue
+
             (frame_time,im) = self.save_queue.get()
             rawname = "raw%s" % cuav_util.frame_time(frame_time)
             frame_count += 1
-            if self.camera_settings.save_pgm != 0 and self.flying:
-                if frame_count % self.camera_settings.save_pgm == 0:
-                    chameleon.save_pgm('%s/%s.pgm' % (raw_dir, rawname), im)
+            #if self.camera_settings.save_pgm != 0 and self.flying:
+            if frame_count % self.camera_settings.save_pgm == 0:
+                print("Saving " + rawname)
+                chameleon.save_pgm('%s/%s.pgm' % (raw_dir, rawname), im)
 
     def scan_thread(self):
         '''image scanning thread'''
@@ -524,6 +537,7 @@ class CameraModule(mp_module.MPModule):
             except Queue.Empty:
                 continue
 
+            print("Image on scan queue.")
             scan_parms = {}
             for name in self.image_settings.list():
                 scan_parms[name] = self.image_settings.get(name)
