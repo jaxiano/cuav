@@ -368,7 +368,7 @@ class CameraModule(mp_module.MPModule):
         time.sleep(0.5)
         h = chameleon.open(1, self.camera_settings.depth, self.camera_settings.capture_brightness)
 
-        print('Getting camare base_time')
+        print('Getting camera base_time')
         while frame_time is None:
             try:
                 im = numpy.zeros((960,1280),dtype='uint8' if self.camera_settings.depth==8 else 'uint16')
@@ -420,9 +420,7 @@ class CameraModule(mp_module.MPModule):
         last_successful_capture = None
 
         while not self.unload_event.wait(0.02):
-            print("In capture loop")
             if not self.running:            
-                print("Not running")
                 if h is not None:
                     chameleon.close(h)
                     h = None
@@ -458,9 +456,7 @@ class CameraModule(mp_module.MPModule):
                 capture_time = time.time()
                 
                 # capture an image
-                print("Capturing an image...")
                 frame_time, frame_counter, shutter = chameleon.capture(h, 1000, im)
-                print("Returned from capturing")
                 if frame_time < last_capture_frame_time:
                     base_time += 128
                 last_capture_frame_time = frame_time
@@ -521,10 +517,9 @@ class CameraModule(mp_module.MPModule):
             (frame_time,im) = self.save_queue.get()
             rawname = "raw%s" % cuav_util.frame_time(frame_time)
             frame_count += 1
-            #if self.camera_settings.save_pgm != 0 and self.flying:
-            if frame_count % self.camera_settings.save_pgm == 0:
-                print("Saving " + rawname)
-                chameleon.save_pgm('%s/%s.pgm' % (raw_dir, rawname), im)
+            if self.camera_settings.save_pgm != 0 and self.flying:
+                if frame_count % self.camera_settings.save_pgm == 0:
+                    chameleon.save_pgm('%s/%s.pgm' % (raw_dir, rawname), im)
 
     def scan_thread(self):
         '''image scanning thread'''
@@ -537,7 +532,6 @@ class CameraModule(mp_module.MPModule):
             except Queue.Empty:
                 continue
 
-            print("Image on scan queue.")
             scan_parms = {}
             for name in self.image_settings.list():
                 scan_parms[name] = self.image_settings.get(name)
