@@ -1,0 +1,21 @@
+set heartbeat 0
+set streamrate -1
+set streamrate2 -1
+set moddebug 1
+module load cuav.modules.camera
+camera set use_bsend2 1
+camera set bandwidth2 1500
+camera set send2_divider 5
+camera set gcs_address 10.0.107.102
+camera set gcs_view_port 7543
+camera set minscore 500
+camera set minscore2 1200
+camera set bandwidth 130000
+camera set blue_emphasis 1
+camera set camparms cuav/data/flea.json
+# use TERRAIN_REPORT for altitude
+camera set altitude 0
+set moddebug 2
+set distreadout 0
+set altreadout 0
+

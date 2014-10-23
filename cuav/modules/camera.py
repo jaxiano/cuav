@@ -144,6 +144,7 @@ class CameraModule(mp_module.MPModule):
         self.flying = True
         self.terrain_alt = None
         self.last_camparms = None
+	##keep thses separate from cameraparams until sure they are equivalent to xresolution and yresolution
 	self.width = 2448 
 	self.height = 2048
 
@@ -229,8 +230,8 @@ class CameraModule(mp_module.MPModule):
         self.transmit_queue = Queue.Queue()
         self.viewing = False
         self.have_set_gps_time = False
-        
-        self.c_params = CameraParams(lens=4.0)
+	##TODO get rid of separate height and width and depend on camera params        
+        self.c_params = CameraParams(lens=4.0, xresolution=self.width, yresolution=self.height)
         self.jpeg_size = 0
         self.xmit_queue = 0
         self.xmit_queue2 = 0
@@ -398,6 +399,8 @@ class CameraModule(mp_module.MPModule):
         if os.path.exists(self.camera_settings.camparms):
             self.c_params.load(self.camera_settings.camparms)
             print("Loaded %s" % self.camera_settings.camparms)
+	    self.height = self.c_params.yresolution
+	    self.width = self.c_params.xresolution
         else:
             print("Warning: %s not found" % self.camera_settings.camparms)
 
@@ -496,7 +499,7 @@ class CameraModule(mp_module.MPModule):
                     self.framerate = 1.0 / (frame_time - last_frame_time)
                 last_frame_time = frame_time
                 last_frame_counter = frame_counter
-		time.sleep(0.8)
+		time.sleep(1)
             except chameleon.error, msg:
                 print("Exception in capture thread: " + msg)
                 self.error_count += 1
@@ -784,7 +787,7 @@ class CameraModule(mp_module.MPModule):
                 last_thumbfile = joe.thumb_filename
             else:
                 try:
-                    composite = cv.LoadImage(last_joe.thumb_filename)
+                    composite = cv.LoadImage(filename=last_joe.thumb_filename,height=self.height, width=self.width)
                     thumbs = cuav_mosaic.ExtractThumbs(composite, len(regions))
                     mosaic.add_regions(regions, thumbs, last_joe.image_filename, last_joe.pos)
                 except Exception:
@@ -794,7 +797,7 @@ class CameraModule(mp_module.MPModule):
                 last_thumbfile = None
         if last_joe:
             try:
-                composite = cv.LoadImage(last_joe.thumb_filename)
+                composite = cv.LoadImage(filename=last_joe.thumb_filename,height=self.height,width=self.width)
                 thumbs = cuav_mosaic.ExtractThumbs(composite, len(regions))
                 mosaic.add_regions(regions, thumbs, last_joe.image_filename, last_joe.pos)
             except Exception:
@@ -929,7 +932,7 @@ class CameraModule(mp_module.MPModule):
                 # save the thumbnails
                 thumb_filename = '%s/v%s.jpg' % (thumb_dir, cuav_util.frame_time(obj.frame_time))
                 chameleon.save_file(thumb_filename, obj.thumb)
-                composite = cv.LoadImage(thumb_filename)
+                composite = cv.LoadImage(filename=thumb_filename,height=self.height,width=self.width)
                 if composite is None:
                     continue
                 thumbs = cuav_mosaic.ExtractThumbs(composite, len(obj.regions))
@@ -964,7 +967,7 @@ class CameraModule(mp_module.MPModule):
                 # save it to disk
                 filename = '%s/v%s.jpg' % (view_dir, cuav_util.frame_time(obj.frame_time))
                 chameleon.save_file(filename, obj.jpeg)
-                img = cv.LoadImage(filename)
+                img = cv.LoadImage(filename=filename,height=self.height, width=self.width)
                 if img is None:
                     continue
                 if img.width > 1280:
@@ -1121,7 +1124,7 @@ class CameraModule(mp_module.MPModule):
             print("No file: %s" % filename)
             return
         try:
-            img = cuav_util.LoadImage(filename, rotate180=self.camera_settings.rotate180)
+            img = cuav_util.LoadImage(filename=filename, height=self.height, width=self.width, rotate180=self.camera_settings.rotate180)
             img = numpy.asarray(cv.GetMat(img))
         except Exception:
             return

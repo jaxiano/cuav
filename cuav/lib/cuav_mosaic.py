@@ -250,7 +250,7 @@ class Mosaic():
 
     def view_imagefile(self, filename):
         '''view an image in a zoomable window'''
-        img = cuav_util.LoadImage(filename, rotate180=self.camera_settings.rotate180)
+        img = cuav_util.LoadImage(filename=filename, height=self.c_params.yresolution, width=self.c_params.xresolution, rotate180=self.camera_settings.rotate180)
         (w,h) = cuav_util.image_shape(img)
         for i in range(len(self.images)):
             if filename == self.images[i].filename:

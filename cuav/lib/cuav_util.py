@@ -550,7 +550,7 @@ def socket_send_queue_size(sock):
     return v
 
 
-def LoadImage(filename, rotate180=False):
+def LoadImage(filename, rotate180=False,height=960,width=1280):
 	'''wrapper around cv.LoadImage that also handles PGM.
 	It always returns a colour image of the same size'''
 	if filename.endswith('.pgm'):
@@ -560,7 +560,7 @@ def LoadImage(filename, rotate180=False):
                 except Exception as e:
                         print('Failed to load %s: %s' % (filename, e))
                         return None
-		im_full = numpy.zeros((960,1280,3),dtype='uint8')
+		im_full = numpy.zeros((height,width,3),dtype='uint8')
 		scanner.debayer(pgm.array, im_full)
                 if rotate180:
                         scanner.rotate180(im_full)
