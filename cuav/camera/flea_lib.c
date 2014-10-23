@@ -147,8 +147,73 @@ void PrintCameraInfo( fc2Context context )
         camInfo.firmwareBuildTime );
 }
 
+fleaCamera* open_camera_gigE()
+{
+        fc2Error error;
+        fleaCamera* camera = calloc(1, sizeof(fleaCamera));
+        fc2PGRGuid guid;
+        fc2TriggerMode trigger_mode;
+        fc2GigEImageSettings image_settings;
+    
+        printf("Creating context\n");
+	camera->useTrigger = 0;
+        error = fc2CreateGigEContext( &camera->context );
+        if ( error != FC2_ERROR_OK )
+        {
+            printf( "Error in fc2CreateContext: %d\n", error );
+            free(camera);
+            return NULL;
+        }        
+    
+        // Get the 0th camera
+        fc2GetCameraFromIndex( camera->context, 0, &guid );
+        
+        error = fc2Connect( camera->context, &guid );
+        if ( error != FC2_ERROR_OK )
+        {
+            printf( "Error in fc2Connect: %d\n", error );
+            close_camera(camera);
+            return NULL;
+        }
+    
+        //PrintCameraInfo( camera->context );  
+        SetTimeStamping( camera->context, TRUE );      
+        error = fc2GetGigEImageSettings(camera->context, &image_settings);
+        if ( error != FC2_ERROR_OK )
+        {
+            printf( "Error getting image settings settings: %d\n", error );
+            return NULL;
+        }
+    
+    
+        image_settings.width = 2448;
+        image_settings.height = 2048;
+        image_settings.offsetX = 0;
+        image_settings.offsetY = 0;
+        image_settings.pixelFormat = FC2_PIXEL_FORMAT_RAW8;
+    
+        error = fc2SetGigEImageSettings(camera->context, &image_settings);
+        if ( error != FC2_ERROR_OK )
+        {
+            printf( "Error setting format7 settings: %d\n", error );
+            return NULL;
+        }
+        sleep(0.5);
+    
+        error = fc2StartCapture( camera->context );
+        if ( error != FC2_ERROR_OK )
+        {
+            printf( "Error in fc2StartCapture: %d\n", error );
+        }
+    
+        sleep(0.5);
 
-fleaCamera* open_camera()
+    return camera;
+}
+
+
+
+fleaCamera* open_camera_f7()
 {
     fc2Error error;
     fleaCamera* camera = calloc(1, sizeof(fleaCamera));
@@ -160,6 +225,7 @@ fleaCamera* open_camera()
     uint packet_size = 0;
     float percentage = 0.0;
 
+    camera->useTrigger = 0;
     printf("Creating context\n");
     error = fc2CreateContext( &camera->context );
     if ( error != FC2_ERROR_OK )
@@ -189,24 +255,8 @@ fleaCamera* open_camera()
         printf( "Error getting format7 settings: %d\n", error );
         return NULL;
     }
-    PrintFormat7Settings(&image_settings, packet_size, percentage);
-/*    
-    f7info.maxWidth = 1280;
-    f7info.maxHeight = 960;
-    error = fc2GetFormat7Info(camera->context, &f7info, &supported);
-    PrintFormat7Info(&f7info);
-    if ( error != FC2_ERROR_OK )
-    {
-        printf( "Error getting format7 info: %d\n", error );
-        return NULL;
-    }
+    //PrintFormat7Settings(&image_settings, packet_size, percentage);
 
-    if (!supported)
-    {
-        printf("fc2GetFormat7Info says not supported\n");
-
-    }
-*/  
     image_settings.width = 1280;
     image_settings.height = 960;
     packet_info.recommendedBytesPerPacket = 1400;
@@ -230,8 +280,8 @@ fleaCamera* open_camera()
         printf("Settings Not Validated");
     }
 
-    PrintFormat7Settings(&image_settings, packet_size, percentage);
-    error = fc2GetTriggerMode(camera->context, &trigger_mode);
+    //PrintFormat7Settings(&image_settings, packet_size, percentage);
+/*    error = fc2GetTriggerMode(camera->context, &trigger_mode);
     if ( error != FC2_ERROR_OK )
     {
         printf( "Error in fc2GetTriggerMode: %d\n", error );
@@ -247,7 +297,7 @@ fleaCamera* open_camera()
         printf( "Error in fc2SetTriggerMode: %d\n", error );
     }
     
-
+*/
     error = fc2StartCapture( camera->context );
     if ( error != FC2_ERROR_OK )
     {
@@ -261,6 +311,8 @@ fleaCamera* open_camera()
 int trigger(fleaCamera* camera)
 {
     fc2Error error;
+
+    if (!camera->useTrigger) return 0;
 
     error = fc2FireSoftwareTrigger( camera->context );
     if ( error != FC2_ERROR_OK )

@@ -43,7 +43,7 @@ flea_open(PyObject *self, PyObject *args)
 
 	for (i = 0; i < NUM_CAMERA_HANDLES; ++i) {
 		if (cameras[i] == NULL) {
-			cam = open_camera();
+			cam = open_camera_gigE();
 			if (cam != NULL) {
 				cameras[i] = cam;
 				handle = i;
@@ -127,7 +127,7 @@ static PyObject * flea_capture(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "iiO", &handle, &timeout_ms, &array))
 	{
 		return NULL;
-    }
+    	}
 	CHECK_CONTIGUOUS(array);
 
 	if (handle >= 0 && handle < NUM_CAMERA_HANDLES && cameras[handle]) {
@@ -147,10 +147,10 @@ static PyObject * flea_capture(PyObject *self, PyObject *args)
 	int h = PyArray_DIM(array, 0);
 	int stride = PyArray_STRIDE(array, 0);
 	//printf("w=%d, h=%d, stride=%d\n", w,h,stride);
-	if (w != 1280 || h != 960){
-		PyErr_SetString(FleaError, "Invalid array dimensions should be 960x1280");
-		return NULL;
-	}
+	//if (w != 1280 || h != 960){
+	//	PyErr_SetString(FleaError, "Invalid array dimensions should be 960x1280");
+	//	return NULL;
+	//}
 
 	void* buf = PyArray_DATA(array);
 	float frame_time=0;
