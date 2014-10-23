@@ -230,6 +230,7 @@ fleaCamera* open_camera()
         printf("Settings Not Validated");
     }
 
+    PrintFormat7Settings(&image_settings, packet_size, percentage);
     error = fc2GetTriggerMode(camera->context, &trigger_mode);
     if ( error != FC2_ERROR_OK )
     {

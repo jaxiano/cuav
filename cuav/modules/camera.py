@@ -470,7 +470,6 @@ class CameraModule(mp_module.MPModule):
                 # discard based on process_divider setting
                 self.process_counter += 1
                 if self.process_counter % self.camera_settings.process_divider != 0:
-                    print("discarded based on process divider setting")
                     continue
                 
                 if self.camera_settings.use_capture_time:
@@ -478,7 +477,6 @@ class CameraModule(mp_module.MPModule):
                 else:
                     img_time = base_time + frame_time
 
-                print("writing to the gamma log")
                 gammalog.write('%f %f %f %s %u %u\n' % (frame_time,
                                                         frame_time+base_time,
                                                         capture_time,
@@ -496,13 +494,13 @@ class CameraModule(mp_module.MPModule):
                     self.framerate = 1.0 / (frame_time - last_frame_time)
                 last_frame_time = frame_time
                 last_frame_counter = frame_counter
+		time.sleep(0.8)
             except chameleon.error, msg:
                 print("Exception in capture thread: " + msg)
                 self.error_count += 1
                 self.error_msg = msg
         if h is not None:
             chameleon.close(h)
-        print("Exiting capture thread")
 
 
     def save_thread(self):
@@ -657,6 +655,8 @@ class CameraModule(mp_module.MPModule):
                 continue
 
             (frame_time, regions, im_full, im_640) = self.transmit_queue.get()
+            
+	    
             if self.camera_settings.roll_stabilised:
                 roll=0
             else:
@@ -685,7 +685,8 @@ class CameraModule(mp_module.MPModule):
             jpeg = None
 
             if len(regions) > 0:
-                reg_count += 1
+                print('length of regions > 0')
+	        reg_count += 1
                 lowscore = 0
                 highscore = 0
                 for r in regions:
@@ -693,6 +694,7 @@ class CameraModule(mp_module.MPModule):
                     highscore = max(highscore, r.score)
                 
                 if self.camera_settings.transmit:
+		    print('set to transmit')
                     # send a region message with thumbnails to the ground station
                     thumb_img = cuav_mosaic.CompositeThumbnail(cv.GetImage(cv.fromarray(im_full)),
                                                                regions,
@@ -706,8 +708,10 @@ class CameraModule(mp_module.MPModule):
 
                     blk_cancel = BlockCancel(None)
 
+		    print('send1: {0} highscore: {1} minscore: {2}'.format(self.camera_settings.send1, highscore, self.camera_settings.minscore))
                     if self.camera_settings.send1 and highscore >= self.camera_settings.minscore:
                         # send on primary link
+			print('sending on bsend')
                         self.bsend.set_bandwidth(self.camera_settings.bandwidth)
                         self.bsend.set_packet_loss(self.camera_settings.packet_loss)
                         self.bsend.send(buf, priority=highscore, callback=functools.partial(self.send_complete, blk_cancel))
@@ -760,7 +764,7 @@ class CameraModule(mp_module.MPModule):
 
         pkt = ImagePacket(frame_time, jpeg, self.xmit_queue, pos, priority)
         str = cPickle.dumps(pkt, cPickle.HIGHEST_PROTOCOL)
-        # print("sending image len=%u" % len(str))
+        print("sending image len=%u to %s:%u" % (len(str), bsend.dest_ip, bsend.dest_port))
         bsend.send(str, priority=priority)
 
 
@@ -797,6 +801,7 @@ class CameraModule(mp_module.MPModule):
     def start_aircraft_bsend(self):
         '''start bsend for aircraft side'''
         if self.bsend is None:
+	    print('initializing bsend')
             self.bsend = block_xmit.BlockSender(self.camera_settings.aircraft_port,
                                                 bandwidth=self.camera_settings.bandwidth, debug=False,
                                                 dest_ip=self.camera_settings.gcs_address,
