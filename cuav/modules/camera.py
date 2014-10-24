@@ -690,7 +690,6 @@ class CameraModule(mp_module.MPModule):
             jpeg = None
 
             if len(regions) > 0:
-                print('length of regions > 0')
 	        reg_count += 1
                 lowscore = 0
                 highscore = 0
@@ -699,7 +698,6 @@ class CameraModule(mp_module.MPModule):
                     highscore = max(highscore, r.score)
                 
                 if self.camera_settings.transmit:
-		    print('set to transmit')
                     # send a region message with thumbnails to the ground station
                     thumb_img = cuav_mosaic.CompositeThumbnail(cv.GetImage(cv.fromarray(im_full)),
                                                                regions,
@@ -713,10 +711,9 @@ class CameraModule(mp_module.MPModule):
 
                     blk_cancel = BlockCancel(None)
 
-		    print('send1: {0} highscore: {1} minscore: {2}'.format(self.camera_settings.send1, highscore, self.camera_settings.minscore))
+		    #print('send1: {0} highscore: {1} minscore: {2}'.format(self.camera_settings.send1, highscore, self.camera_settings.minscore))
                     if self.camera_settings.send1 and highscore >= self.camera_settings.minscore:
                         # send on primary link
-			print('sending on bsend')
                         self.bsend.set_bandwidth(self.camera_settings.bandwidth)
                         self.bsend.set_packet_loss(self.camera_settings.packet_loss)
                         self.bsend.send(buf, priority=highscore, callback=functools.partial(self.send_complete, blk_cancel))
@@ -787,7 +784,7 @@ class CameraModule(mp_module.MPModule):
                 last_thumbfile = joe.thumb_filename
             else:
                 try:
-                    composite = cv.LoadImage(filename=last_joe.thumb_filename,height=self.height, width=self.width)
+                    composite = cv.LoadImage(last_joe.thumb_filename)
                     thumbs = cuav_mosaic.ExtractThumbs(composite, len(regions))
                     mosaic.add_regions(regions, thumbs, last_joe.image_filename, last_joe.pos)
                 except Exception:
@@ -797,7 +794,7 @@ class CameraModule(mp_module.MPModule):
                 last_thumbfile = None
         if last_joe:
             try:
-                composite = cv.LoadImage(filename=last_joe.thumb_filename,height=self.height,width=self.width)
+                composite = cv.LoadImage(last_joe.thumb_filename)
                 thumbs = cuav_mosaic.ExtractThumbs(composite, len(regions))
                 mosaic.add_regions(regions, thumbs, last_joe.image_filename, last_joe.pos)
             except Exception:
@@ -932,7 +929,7 @@ class CameraModule(mp_module.MPModule):
                 # save the thumbnails
                 thumb_filename = '%s/v%s.jpg' % (thumb_dir, cuav_util.frame_time(obj.frame_time))
                 chameleon.save_file(thumb_filename, obj.thumb)
-                composite = cv.LoadImage(filename=thumb_filename,height=self.height,width=self.width)
+                composite = cv.LoadImage(thumb_filename)
                 if composite is None:
                     continue
                 thumbs = cuav_mosaic.ExtractThumbs(composite, len(obj.regions))
@@ -967,7 +964,7 @@ class CameraModule(mp_module.MPModule):
                 # save it to disk
                 filename = '%s/v%s.jpg' % (view_dir, cuav_util.frame_time(obj.frame_time))
                 chameleon.save_file(filename, obj.jpeg)
-                img = cv.LoadImage(filename=filename,height=self.height, width=self.width)
+                img = cv.LoadImage(filename)
                 if img is None:
                     continue
                 if img.width > 1280:
