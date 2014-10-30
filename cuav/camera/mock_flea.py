@@ -13,14 +13,18 @@ from cuav.image import scanner
 
 error = chameleon.error
 continuous_mode = False
-fake = 'fake_chameleon.pgm'
+fake = 'cuav/tests/test-8bit.pgm'
 frame_counter = 0
 trigger_time = 0
 frame_rate = 7.5
 chameleon_gamma = 950
 last_frame_time = 0
+image_height = 960
+image_width = 1280
 
 def open(colour, depth, brightness, height, width):
+    image_height = height
+    image_width = width
     return 0
 
 def trigger(h, continuous):
@@ -35,7 +39,7 @@ def load_image(filename):
         return fake_img.array
     img = cv.LoadImage(filename)
     array = numpy.asarray(cv.GetMat(img))
-    grey = numpy.zeros((960,1280), dtype='uint8')
+    grey = numpy.zeros((image_height, image_width), dtype='uint8')
     scanner.rebayer(array, grey)
     return grey
     
@@ -49,24 +53,14 @@ def capture(h, timeout, img):
         timeout -= int(due*1000)
     # wait for a new image to appear
     filename = os.path.realpath(fake)
-    frame_time = cuav_util.parse_frame_time(filename)
-    while frame_time == last_frame_time and timeout > 0:
-        timeout -= 10
-        time.sleep(0.01)
-        filename = os.path.realpath(fake)
-        frame_time = cuav_util.parse_frame_time(filename)
 
-    if last_frame_time == frame_time:
-        raise chameleon.error("timeout waiting for fake image")
-    last_frame_time = frame_time
     try:
         fake_img = load_image(filename)
     except Exception, msg:
         raise chameleon.error('missing %s' % fake)
     frame_counter += 1
     img.data = fake_img.data
-    if continuous_mode:
-        trigger_time = time.time()
+    trigger_time = time.time()
     return trigger_time, frame_counter, 0
 
 def close(h):

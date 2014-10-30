@@ -24,9 +24,9 @@ from MAVProxy.modules.mavproxy_map import mp_slipmap
 
 # allow for replaying of previous flights
 if os.getenv('FAKE_CHAMELEON'):
-    print("Loaded fake chameleon backend")
-    import cuav.camera.fake_chameleon as chameleon
-    #import cuav.camera.flea.flea as chameleon
+    print("Loaded mock backend")
+    #import cuav.camera.fake_chameleon as chameleon
+    import cuav.camera.mock_flea as chameleon
 else:
     import cuav.camera.flea as chameleon
     #import cuav.camera.chameleon as chameleon
@@ -145,9 +145,6 @@ class CameraModule(mp_module.MPModule):
         self.terrain_alt = None
         self.last_camparms = None
 	##keep thses separate from cameraparams until sure they are equivalent to xresolution and yresolution
-	self.width = 2448 
-	self.height = 2048
-
         # prevent loopback of messages
         for mtype in ['DATA16', 'DATA32', 'DATA64', 'DATA96']:
             self.module('link').no_fwd_types.add(mtype)
@@ -181,6 +178,8 @@ class CameraModule(mp_module.MPModule):
               
               MPSetting('bandwidth',  int, 40000, 'Link1 Bandwdith', 'Comms'),
               MPSetting('bandwidth2', int, 2000, 'Link2 Bandwidth'),
+              MPSetting('height', int, 2048, 'Height of Image.  X resolution'),
+              MPSetting('width', int, 2448, 'Width of Image. Y resolution'),
               MPSetting('quality', int, 75, 'Compression Quality', range=(1,100), increment=1),
               MPSetting('transmit', bool, True, 'Transmit Enable'),
               MPSetting('send1', bool, True, 'Send on Link1'),
@@ -231,7 +230,7 @@ class CameraModule(mp_module.MPModule):
         self.viewing = False
         self.have_set_gps_time = False
 	##TODO get rid of separate height and width and depend on camera params        
-        self.c_params = CameraParams(lens=4.0, xresolution=self.width, yresolution=self.height)
+        self.c_params = CameraParams(lens=4.0, xresolution=self.camera_settings.width, yresolution=self.camera_settings.height)
         self.jpeg_size = 0
         self.xmit_queue = 0
         self.xmit_queue2 = 0
@@ -369,25 +368,25 @@ class CameraModule(mp_module.MPModule):
 
         print('Opening camera')
         time.sleep(0.5)
-        h = chameleon.open(1, self.camera_settings.depth, self.camera_settings.capture_brightness)
+        h = chameleon.open(1, self.camera_settings.depth, self.camera_settings.capture_brightness, self.camera_settings.height, self.camera_settings.width)
 
         print('Getting camera base_time')
         while frame_time is None:
             try:
-                im = numpy.zeros((self.height,self.width),dtype='uint8' if self.camera_settings.depth==8 else 'uint16')
+                im = numpy.zeros((self.camera_settings.height,self.camera_settings.width),dtype='uint8' if self.camera_settings.depth==8 else 'uint16')
                 base_time = time.time()
                 chameleon.trigger(h, False)
                 frame_time, frame_counter, shutter = chameleon.capture(h, 1000, im)
                 base_time -= frame_time
-            except chameleon.error:
-                print('failed to capture')
+            except chameleon.error, msg:
+                print('failed to capture: {0}'.format(msg))
                 error_count += 1
             if error_count > 3:
                 error_count = 0
                 print('re-opening camera')
                 chameleon.close(h)
                 time.sleep(0.5)
-                h = chameleon.open(1, self.camera_settings.depth, self.camera_settings.capture_brightness)
+                h = chameleon.open(1, self.camera_settings.depth, self.camera_settings.capture_brightness, self.camera_settings.height, self.camera_settings.width)
         print('base_time=%f' % base_time)
         return h, base_time, frame_time
 
@@ -399,8 +398,6 @@ class CameraModule(mp_module.MPModule):
         if os.path.exists(self.camera_settings.camparms):
             self.c_params.load(self.camera_settings.camparms)
             print("Loaded %s" % self.camera_settings.camparms)
-	    self.height = self.c_params.yresolution
-	    self.width = self.c_params.xresolution
         else:
             print("Warning: %s not found" % self.camera_settings.camparms)
 
@@ -443,12 +440,12 @@ class CameraModule(mp_module.MPModule):
                     h, base_time, last_frame_time = self.get_base_time()
                     last_capture_frame_time = last_frame_time
                     # put into continuous mode
-                chameleon.trigger(h, True)
+                    chameleon.trigger(h, True)
 
                 if self.camera_settings.depth == 16:
-                    im = numpy.zeros((self.height, self.width),dtype='uint16')
+                    im = numpy.zeros((self.camera_settings.height, self.camera_settings.width),dtype='uint16')
                 else:
-                    im = numpy.zeros((self.height, self.width),dtype='uint8')
+                    im = numpy.zeros((self.camera_settings.height, self.camera_settings.width),dtype='uint8')
                 if last_gamma != self.camera_settings.gamma:
                     chameleon.set_gamma(h, self.camera_settings.gamma)
                     last_gamma = self.camera_settings.gamma
@@ -548,8 +545,8 @@ class CameraModule(mp_module.MPModule):
                 scan_parms['MetersPerPixel'] = self.camera_settings.mpp100 * altitude / 100.0
             
             t1 = time.time()
-            im_full = numpy.zeros((self.height, self.width,3),dtype='uint8')
-            im_640 = numpy.zeros((self.height/2,self.width/2,3),dtype='uint8')
+            im_full = numpy.zeros((self.camera_settings.height, self.camera_settings.width,3),dtype='uint8')
+            im_640 = numpy.zeros((self.camera_settings.height/2,self.camera_settings.width/2,3),dtype='uint8')
             scanner.debayer(im, im_full)
             if self.camera_settings.rotate180:
                 scanner.rotate180(im_full)
@@ -1121,12 +1118,12 @@ class CameraModule(mp_module.MPModule):
             print("No file: %s" % filename)
             return
         try:
-            img = cuav_util.LoadImage(filename=filename, height=self.height, width=self.width, rotate180=self.camera_settings.rotate180)
+            img = cuav_util.LoadImage(filename=filename, height=self.camera_settings.height, width=self.camera_settings.width, rotate180=self.camera_settings.rotate180)
             img = numpy.asarray(cv.GetMat(img))
         except Exception:
             return
         if not obj.fullres:
-            im_640 = numpy.zeros((img.height/2, img.width/2,3),dtype='uint8')
+            im_640 = numpy.zeros((self.camera_settings.height/2, self.camera_settings.width/2,3),dtype='uint8')
             scanner.downsample(img, im_640)
             img = im_640
         print("Sending image %s" % filename)

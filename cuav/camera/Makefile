@@ -13,7 +13,7 @@ CFLAGS=-I/usr/local/include -Wall -std=gnu99 -fPIC -O3 -Wa,$(LISTOPTS) $(INCLUDE
 endif
 #CFLAGS=-I/usr/local/include -Wall -std=gnu99 -fPIC -g -Wa,$(LISTOPTS) $(INCLUDES)
 LIBS=-L/usr/local/lib -ldc1394 -lm -lusb-1.0
-FLEA_LIBS=-L../../lib/C -lflycapture-c${D} -L../../lib -lflycapture${D}
+FLEA_LIBS= -lflycapture-c 
 TARGETS=capture_test capture_images capture_v4l chameleon_twin chameleon_twin16 chameleon_twin8 chameleon.so flea.so
 
 all: $(TARGETS)
@@ -40,7 +40,7 @@ chameleon.so: chameleon_py.o chameleon.o chameleon_util.o
 	$(CC) -shared -o chameleon.so chameleon_py.o chameleon_util.o chameleon.o $(LIBS) $(shell python-config --libs)
 
 flea.so:
-	$(CC) $(CFLAGS) $(FLEA_INCLUDES) -fPIC -shared flea_lib.c flea_py.c $(LIBS) $(FLEA_LIBS) -o flea.so
+	$(CC) $(CFLAGS) $(FLEA_INCLUDES) -fPIC -shared flea_lib.c flea_py.c $(LIBS) -o flea.so
 
 
 clean:

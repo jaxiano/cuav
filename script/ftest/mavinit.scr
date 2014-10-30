@@ -12,6 +12,9 @@ camera set minscore 500
 camera set minscore2 1200
 camera set bandwidth 130000
 camera set blue_emphasis 1
+camera set height 1200
+camera set width 1600
+camera set save_pgm 1
 camera set camparms cuav/data/flea.json
 # use TERRAIN_REPORT for altitude
 camera set altitude 0

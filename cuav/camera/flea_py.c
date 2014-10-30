@@ -34,17 +34,21 @@ flea_open(PyObject *self, PyObject *args)
 	unsigned short depth = 0;
 	unsigned short brightness;
 	PyObject *colour_obj;
+	unsigned int height = 2048, width = 2448;
 	
 	//Trying to stick to the chameleon interface.  Deal with the extra parameters later
-	if (!PyArg_ParseTuple(args, "OHH", &colour_obj, &depth, &brightness))
+	if (!PyArg_ParseTuple(args, "OHH|II", &colour_obj, &depth, &brightness, &height, &width))
 	{
         return NULL;	
     }
+    
 
 	for (i = 0; i < NUM_CAMERA_HANDLES; ++i) {
 		if (cameras[i] == NULL) {
-			cam = open_camera_gigE();
+			cam = open_camera(brightness, height, width);
 			if (cam != NULL) {
+			    cam->height = height;
+			    cam->width =width;
 				cameras[i] = cam;
 				handle = i;
 				break;
@@ -91,7 +95,6 @@ static PyObject *
 flea_trigger(PyObject *self, PyObject *args)
 {
 	int handle = -1;
-	int status;
 	fleaCamera* cam = NULL;
 	//bool continuous;
 	PyObject *continuous_obj;
@@ -122,12 +125,10 @@ static PyObject * flea_capture(PyObject *self, PyObject *args)
 	fleaCamera* cam = NULL;
 	PyArrayObject* array = NULL;
 
-    
-
 	if (!PyArg_ParseTuple(args, "iiO", &handle, &timeout_ms, &array))
 	{
 		return NULL;
-    	}
+    }
 	CHECK_CONTIGUOUS(array);
 
 	if (handle >= 0 && handle < NUM_CAMERA_HANDLES && cameras[handle]) {
@@ -145,12 +146,14 @@ static PyObject * flea_capture(PyObject *self, PyObject *args)
 	
 	int w = PyArray_DIM(array, 1);
 	int h = PyArray_DIM(array, 0);
-	int stride = PyArray_STRIDE(array, 0);
+	//int stride = PyArray_STRIDE(array, 0);
 	//printf("w=%d, h=%d, stride=%d\n", w,h,stride);
-	//if (w != 1280 || h != 960){
-	//	PyErr_SetString(FleaError, "Invalid array dimensions should be 960x1280");
-	//	return NULL;
-	//}
+	if (w != cam->width || h != cam->height){
+        char description[80];
+	    sprintf(description,"Invalid array dimensions. Should be %ux%u.  Found %ux%u", cam->width, cam->height, w, h);
+		PyErr_SetString(FleaError, description);
+		return NULL;
+	}
 
 	void* buf = PyArray_DATA(array);
 	float frame_time=0;
@@ -179,6 +182,7 @@ flea_set_gamma(PyObject *self, PyObject *args)
 
 	if (handle >= 0 && handle < NUM_CAMERA_HANDLES && cameras[handle]) {
 		cam = cameras[handle];
+		set_gamma(cam, gamma);
 	} else {
 		PyErr_SetString(FleaError, "Invalid handle");
 		return NULL;
@@ -191,6 +195,7 @@ flea_set_gamma(PyObject *self, PyObject *args)
 static PyObject *
 flea_set_framerate(PyObject *self, PyObject *args)
 {
+/*
 	int handle = -1;
 	int framerate=0;
 	fleaCamera* cam = NULL;
@@ -204,7 +209,7 @@ flea_set_framerate(PyObject *self, PyObject *args)
 		PyErr_SetString(FleaError, "Invalid handle");
 		return NULL;
 	}
-
+*/
 	Py_RETURN_NONE;
 }
 
@@ -220,6 +225,7 @@ flea_set_brightness(PyObject *self, PyObject *args)
 
 	if (handle >= 0 && handle < NUM_CAMERA_HANDLES && cameras[handle]) {
 		cam = cameras[handle];
+		set_brightness(cam, brightness);
 	} else {
 		PyErr_SetString(FleaError, "Invalid handle");
 		return NULL;

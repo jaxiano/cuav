@@ -25,7 +25,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "C/FlyCapture2_C.h"
-#include "flea_lib.h"
+#include "include/flea_lib.h"
 
 void SetTimeStamping( fc2Context context, BOOL enableTimeStamp )
 {
@@ -50,72 +50,24 @@ void SetTimeStamping( fc2Context context, BOOL enableTimeStamp )
     }
 }
 
-
-void PrintImageInfo( fc2Image* img)
+void PrintPropertyInfo( fc2PropertyInfo* prop)
 {
-    printf("\n***Image Information***\n"
-        "Rows - %u\n"
-        "Cols - %u\n"
-        "DataSize - %u\n"
-        "ReceivedDataSize - %u\n"
-        "PixelFormat - %d\n"
-        "BayerFormat - %d\n",
-        img->rows,
-        img->cols,
-        img->dataSize,
-        img->receivedDataSize,
-        img->format,
-        img->bayerFormat);
+    printf("\n***Property Information***\n"
+        "Type - %d\n"
+        "min - %u\n"
+        "max - %u\n",
+        prop->type,
+        prop->min,
+        prop->max);
 }
 
-void PrintFormat7Settings( fc2Format7ImageSettings* img, uint packet_size, float percentage)
+void PrintProperty( fc2Property* prop)
 {
-    printf("\n***Format 7 Image Settings***\n"
-        "Packet size - %u\n"
-        "percentage - %f\n"
-        "Width - %u\n"
-        "Height - %u\n"
-        "offsetX - %u\n"
-        "offsetY - %u\n"
-        "PixelFormat - %d\n"
-        "mode  - %d\n",
-        packet_size,
-        percentage,
-        img->width,
-        img->height,
-        img->offsetX,
-        img->offsetY,
-        img->pixelFormat,
-        img->mode);
-}
-
-void PrintFormat7Info( fc2Format7Info* img)
-{
-    printf("\n***Format 7 Image Info***\n"
-        "maxWidth - %u\n"
-        "maxHeight - %u\n"
-        "offsetHStepSize - %u\n"
-        "offsetVStepSize - %u\n"
-        "imageHStepSize - %u\n"
-        "imageVStepSize - %u\n"
-        "PixelFormatBitField - %u\n"
-        "VendorPixelFormatBitField - %u\n"
-        "packetSize - %u\n"
-        "minPacketSize - %u\n"
-        "maxPacketSize - %u\n"
-        "mode  - %d\n",
-        img->maxWidth,
-        img->maxHeight,
-        img->offsetHStepSize,
-        img->offsetVStepSize,
-        img->imageHStepSize,
-        img->imageVStepSize,
-        img->pixelFormatBitField,
-        img->vendorPixelFormatBitField,
-        img->packetSize,
-        img->minPacketSize,
-        img->maxPacketSize,
-        img->mode);
+    printf("\n***Property Value***\n"
+        "Type - %d\n"
+        "Value - %u\n",
+        prop->type,
+        prop->valueA);
 }
 
 
@@ -147,16 +99,14 @@ void PrintCameraInfo( fc2Context context )
         camInfo.firmwareBuildTime );
 }
 
-fleaCamera* open_camera_gigE()
+fleaCamera* open_camera(int brightness, unsigned int height, unsigned int width)
 {
         fc2Error error;
         fleaCamera* camera = calloc(1, sizeof(fleaCamera));
         fc2PGRGuid guid;
-        fc2TriggerMode trigger_mode;
         fc2GigEImageSettings image_settings;
     
         printf("Creating context\n");
-	camera->useTrigger = 0;
         error = fc2CreateGigEContext( &camera->context );
         if ( error != FC2_ERROR_OK )
         {
@@ -176,7 +126,9 @@ fleaCamera* open_camera_gigE()
             return NULL;
         }
     
+        set_property(camera, FC2_BRIGHTNESS, brightness);
         //PrintCameraInfo( camera->context );  
+        //setup_camera( camera );
         SetTimeStamping( camera->context, TRUE );      
         error = fc2GetGigEImageSettings(camera->context, &image_settings);
         if ( error != FC2_ERROR_OK )
@@ -185,9 +137,9 @@ fleaCamera* open_camera_gigE()
             return NULL;
         }
     
-    
-        image_settings.width = 2448;
-        image_settings.height = 2048;
+       
+        image_settings.width = width;
+        image_settings.height = height;
         image_settings.offsetX = 0;
         image_settings.offsetY = 0;
         image_settings.pixelFormat = FC2_PIXEL_FORMAT_RAW8;
@@ -212,104 +164,58 @@ fleaCamera* open_camera_gigE()
 }
 
 
-
-fleaCamera* open_camera_f7()
+void chkProperty(fleaCamera* camera, fc2PropertyType type)
 {
-    fc2Error error;
-    fleaCamera* camera = calloc(1, sizeof(fleaCamera));
-    fc2PGRGuid guid;
-    fc2TriggerMode trigger_mode;
-    fc2Format7ImageSettings image_settings;
-    fc2Format7PacketInfo packet_info;
-    BOOL supported;
-    uint packet_size = 0;
-    float percentage = 0.0;
+    fc2PropertyInfo info;
+    fc2Property prop;
 
-    camera->useTrigger = 0;
-    printf("Creating context\n");
-    error = fc2CreateContext( &camera->context );
-    if ( error != FC2_ERROR_OK )
-    {
-        printf( "Error in fc2CreateContext: %d\n", error );
-        free(camera);
-        return NULL;
-    }        
-
-    // Get the 0th camera
-    fc2GetCameraFromIndex( camera->context, 0, &guid );
+    info.type = type;
+    fc2GetPropertyInfo(camera->context, &info);
+    PrintPropertyInfo(&info);
     
-    error = fc2Connect( camera->context, &guid );
-    if ( error != FC2_ERROR_OK )
-    {
-        printf( "Error in fc2Connect: %d\n", error );
-        close_camera(camera);
-        return NULL;
-    }
-
-    //PrintCameraInfo( camera->context );  
-    SetTimeStamping( camera->context, TRUE );      
-
-    error = fc2GetFormat7Configuration(camera->context, &image_settings, &packet_size, &percentage);
-    if ( error != FC2_ERROR_OK )
-    {
-        printf( "Error getting format7 settings: %d\n", error );
-        return NULL;
-    }
-    //PrintFormat7Settings(&image_settings, packet_size, percentage);
-
-    image_settings.width = 1280;
-    image_settings.height = 960;
-    packet_info.recommendedBytesPerPacket = 1400;
-    packet_info.maxBytesPerPacket = 2400;
-    packet_info.unitBytesPerPacket = 1400;
-    error = fc2ValidateFormat7Settings(camera->context, &image_settings, &supported, &packet_info);
-
-    if (supported)
-    {
-        printf("format7 settings validated\n");
-        
-        error = fc2SetFormat7Configuration(camera->context, &image_settings, 100.0);
-        if ( error != FC2_ERROR_OK )
-        {
-            printf( "Error setting format7 settings: %d\n", error );
-            return NULL;
-        }
-  
-    } else
-    {
-        printf("Settings Not Validated");
-    }
-
-    //PrintFormat7Settings(&image_settings, packet_size, percentage);
-/*    error = fc2GetTriggerMode(camera->context, &trigger_mode);
-    if ( error != FC2_ERROR_OK )
-    {
-        printf( "Error in fc2GetTriggerMode: %d\n", error );
-    }
-    trigger_mode.onOff = 1;
-    trigger_mode.mode = 0;
-    trigger_mode.parameter = 0;
-    trigger_mode.source = 7; //software trigger
-
-    error = fc2SetTriggerMode(camera->context, &trigger_mode);
-    if ( error != FC2_ERROR_OK )
-    {
-        printf( "Error in fc2SetTriggerMode: %d\n", error );
-    }
+    prop.type = type;
+    fc2GetProperty(camera->context, &prop);
+    PrintProperty(&prop);
     
-*/
-    error = fc2StartCapture( camera->context );
-    if ( error != FC2_ERROR_OK )
-    {
-        printf( "Error in fc2StartCapture: %d\n", error );
-    }
-
-
-    return camera;
 }
+
+void set_property(fleaCamera* camera, fc2PropertyType type, int value)
+{
+    fc2Property prop;
+    prop.type = type;
+    fc2GetProperty(camera->context, &prop);
+    prop.valueA = value;
+    fc2SetProperty(camera->context, &prop);    
+
+}
+
+void set_gamma(fleaCamera* camera, int value)
+{
+    set_property(camera, FC2_GAMMA, value);
+}
+
+void set_brightness(fleaCamera* camera, int value)
+{
+    set_property(camera, FC2_BRIGHTNESS, value);
+}
+
+
+int setup_camera(fleaCamera* camera)
+{
+    
+    chkProperty(camera, FC2_BRIGHTNESS);
+    chkProperty(camera, FC2_GAMMA);
+    chkProperty(camera, FC2_FRAME_RATE);
+    chkProperty(camera, FC2_GAIN);
+    chkProperty(camera, FC2_AUTO_EXPOSURE);
+    
+}
+
+
 
 int trigger(fleaCamera* camera)
 {
+/*** We're staying out of trigger mode for now...
     fc2Error error;
 
     if (!camera->useTrigger) return 0;
@@ -320,6 +226,7 @@ int trigger(fleaCamera* camera)
         printf( "Error in fc2FireSoftwareTrigger: %d\n", error);
         return -1;
     }
+*/
     return 0;
 }
 
@@ -376,6 +283,12 @@ int close_camera(fleaCamera* camera)
         printf( "Error in fc2StopCapture: %d\n", error );
     }
 
+    error = fc2Disconnect( camera->context );
+    if ( error != FC2_ERROR_OK )
+    {
+        printf( "Error in fc2Disconnect: %d\n", error );
+    }
+
     error = fc2DestroyContext( camera->context );
     if ( error != FC2_ERROR_OK )
     {
@@ -385,4 +298,5 @@ int close_camera(fleaCamera* camera)
     free(camera);
     return 0;
 }
+
 
