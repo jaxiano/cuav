@@ -75,6 +75,7 @@ setup (name = 'cuav',
                    'cuav/tests/cuav_benchmark.py' ],
        package_data = { 'cuav' : [ 'tests/test-8bit.pgm',
                                    'data/chameleon1_arecont0.json',
+                                   'data/flea.json',
                                    'camera/include/*.h']},
        ext_modules = ext_modules)
        
