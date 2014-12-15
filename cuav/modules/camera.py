@@ -7,6 +7,8 @@
 
 import time, threading, sys, os, numpy, Queue, errno, cPickle, signal, struct, fcntl, select, cStringIO
 import functools
+import camera_factory
+
 try:
     import cv2.cv as cv
 except ImportError:
@@ -22,14 +24,7 @@ from MAVProxy.modules.lib import mp_image
 from cuav.camera.cam_params import CameraParams
 from MAVProxy.modules.mavproxy_map import mp_slipmap
 
-# allow for replaying of previous flights
-if os.getenv('FAKE_CHAMELEON'):
-    print("Loaded mock backend")
-    #import cuav.camera.fake_chameleon as chameleon
-    import cuav.camera.mock_flea as chameleon
-else:
-    import cuav.camera.flea as chameleon
-    #import cuav.camera.chameleon as chameleon
+chameleon = camera_factory.getCamera()
 
 class MavSocket:
     '''map block_xmit onto MAVLink data packets'''
