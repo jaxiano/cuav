@@ -1,7 +1,7 @@
 from distutils.core import Command
 from setuptools import setup, Extension
 import numpy as np
-import os, sys, platform
+import os, sys, platform, shutil
 import json
 
 version = '1.3.4'
@@ -25,17 +25,6 @@ scanner = Extension('cuav.image.scanner',
 ext_modules.append(scanner)
 
 
-def build_config(camera_type):
-   jsonFile = open("cuav/data/build_config.json", "r")
-   data = json.load(jsonFile)
-   jsonFile.close()
-
-   data["camera"] = camera_type
-
-   jsonFile = open("cuav/data/build_config.json", "w+")
-   jsonFile.write(json.dumps(data))
-   jsonFile.close()
-
 def init_chameleon():
     	chameleon = Extension('cuav.camera.chameleon',
                           sources = ['cuav/camera/chameleon_py.c',
@@ -44,16 +33,6 @@ def init_chameleon():
                           libraries = ['dc1394', 'm', 'usb-1.0'],
                           extra_compile_args=extra_compile_args + ['-O0'])
     	ext_modules.append(chameleon)
-	
-class Chameleon(Command):
-   user_options=[]
-   def initialize_options(self):
-	pass
-   def finalize_options(self):
-	pass
-   def run(self):
-	build_config("chameleon")
-	init_chameleon()
 
 def init_flea():
    	flea = Extension('cuav.camera.flea',
@@ -62,7 +41,28 @@ def init_flea():
                           libraries = ['flycapture-c'])
                           #,extra_compile_args=extra_compile_args + ['-o flea.so'])
    	ext_modules.append(flea)
-	
+
+def build_config(camera_type):
+    dst = "cuav/modules/settings.py"
+
+    if camera_type == "flea":
+        init_flea()
+        src = "cuav/settings/settings_flea.py"
+    else:
+        init_chameleon()
+        src = "cuav/settings/settings_chameleon.py"
+
+    shutil.copyfile(src, dst)
+
+class Chameleon(Command):
+   user_options=[]
+   def initialize_options(self):
+	pass
+   def finalize_options(self):
+	pass
+   def run(self):
+	build_config("chameleon")
+
 class Flea(Command):
    user_options=[]
    def initialize_options(self):
@@ -71,10 +71,8 @@ class Flea(Command):
 	pass
    def run(self):
 	build_config("flea")
-	init_flea()
 
 build_config("chameleon")
-init_chameleon()
 
 setup (name = 'cuav',
         zip_safe=True,
@@ -107,7 +105,6 @@ setup (name = 'cuav',
         package_data = { 'cuav' : [ 'tests/test-8bit.pgm',
                                    'data/chameleon1_arecont0.json',
 				   'data/flea.json',
-				   'data/build_config.json',
                                    'camera/include/*.h']},
         ext_modules = ext_modules,
 	cmdclass={

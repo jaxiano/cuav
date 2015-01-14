@@ -1,22 +1,19 @@
 # determine camera built
-import json, os
+import json, os, zipfile
 
 # allow for replaying of previous flights
 import cuav.camera.fake_chameleon as chameleon
-
-with open("cuav/data/build_config.json", "r") as jsonFile:
-    build_config = json.load(jsonFile)
-
+import settings
 
 if os.getenv('FAKE_CHAMELEON'):
-    if build_config["camera"] == "chameleon":
+    if settings.camera == "chameleon":
        print("Loaded chameleon mock backend")
        import cuav.camera.fake_chameleon as chameleon
-    elif build_config["camera"] == "flea":
+    elif settings.camera == "flea":
        print("Loaded flea mock backend")
        import cuav.camera.mock_flea as chameleon
 else:
-    if build_config["camera"] == "flea":
+    if settings.camera == "flea":
        print("Loaded flea backend")
        import cuav.camera.flea as chameleon
 
