@@ -194,7 +194,8 @@ class CameraModule(mp_module.MPModule):
 
               MPSetting('brightness', float, 1.0, 'Display Brightness', range=(0.1, 10), increment=0.1,
                         digits=2, tab='Display'),
-              MPSetting('debug', bool, False, 'debug enable'),             
+              MPSetting('debug', bool, False, 'debug enable'),
+              MPSetting('lo_res_image', bool, False, 'Send 640x480 image to ground station'),
               ],
             title='Camera Settings'
             )
@@ -732,7 +733,9 @@ class CameraModule(mp_module.MPModule):
                 skip_count += 1
                 continue
             tx_count += 1
-            self.send_image(im_640, frame_time, pos, 0, bsend=self.bsend)
+
+            if self.camera_settings.lo_res_image:
+                self.send_image(im_640, frame_time, pos, 0, bsend=self.bsend)
 
     def best_bsend(self, who):
         '''choose the best link to use'''
