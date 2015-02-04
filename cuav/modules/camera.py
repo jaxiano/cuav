@@ -96,6 +96,7 @@ class ImageRequest:
 class HeartBeat:
     '''generic heartbeat to keep bsend alive'''
     def __init__(self, state):
+        self.command = "Heartbeat"
         self.state = state
 
 class CameraMessage:
