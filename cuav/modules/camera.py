@@ -1134,7 +1134,10 @@ class CameraModule(mp_module.MPModule):
         self.start_gcs_bsend()
         if bsend is None:
             bsend = self.best_bsend('send_packet')
-        print "packet: %s, dest_ip: %s, dest_port: %i" % (pkt.command, bsend.dest_ip, bsend.dest_port)
+
+        if isinstance(pkt, CommandPacket):
+            print "packet: %s, dest_ip: %s, dest_port: %i" % (pkt.command, bsend.dest_ip, bsend.dest_port)
+
         bsend.send(buf, priority=10000)
 
     def camera_settings_callback(self, setting):
