@@ -1149,7 +1149,9 @@ class CameraModule(mp_module.MPModule):
     def send_heartbeat(self, bsend):
         '''send a heartbeat'''
         state = [("camera_running", self.running)]
-        print("camera state: %s" % state)
+        if self.camera_settings.debug:
+            print("camera state: %s" % state)
+
         pkt = HeartBeat(state=state)
         self.send_packet(pkt, bsend)
 
