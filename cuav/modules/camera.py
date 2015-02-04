@@ -95,8 +95,8 @@ class ImageRequest:
 
 class HeartBeat:
     '''generic heartbeat to keep bsend alive'''
-    def __init__(self):
-        pass
+    def __init__(self, state):
+        self.state = state
 
 class CameraMessage:
     '''critical camera message'''
@@ -1133,6 +1133,7 @@ class CameraModule(mp_module.MPModule):
         self.start_gcs_bsend()
         if bsend is None:
             bsend = self.best_bsend('send_packet')
+        print "packet: %s, dest_ip: %s, dest_port: %i" % (pkt.command, bsend.dest_ip, bsend.dest_port)
         bsend.send(buf, priority=10000)
 
     def camera_settings_callback(self, setting):
@@ -1147,7 +1148,9 @@ class CameraModule(mp_module.MPModule):
 
     def send_heartbeat(self, bsend):
         '''send a heartbeat'''
-        pkt = HeartBeat()
+        state = [("camera_running", self.running)]
+        print("camera state: %s" % state)
+        pkt = HeartBeat(state=state)
         self.send_packet(pkt, bsend)
 
     def send_message(self, msg, bsend=None):
