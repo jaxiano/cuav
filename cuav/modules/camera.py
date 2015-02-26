@@ -110,6 +110,12 @@ class ChangeCameraSetting:
         self.name = name
         self.value = value
 
+class ChangeCameraSettingBundle:
+    '''update a image setting'''
+
+    def __init__(self, settings):
+        self.bundle = settings
+
 class ChangeImageSetting:
     '''update a image setting'''
     def __init__(self, name, value):
@@ -1063,6 +1069,17 @@ class CameraModule(mp_module.MPModule):
 
         if isinstance(obj, ChangeCameraSetting):
             self.camera_settings.set(obj.name, obj.value)
+
+        if isinstance(obj, ChangeCameraSettingBundle):
+            buf = 'REMOTE: Change Camera Setting Bundle'
+            print buf
+            for item in obj.bundle:
+                print '   %s:%s' % (item[0], item[1])
+                self.camera_settings.set(item[0], item[1])
+
+            pkt = CommandResponse(buf)
+            buf = cPickle.dumps(pkt, cPickle.HIGHEST_PROTOCOL)
+            bsend.send(buf, priority=10000)
 
         if isinstance(obj, ChangeImageSetting):
             self.image_settings.set(obj.name, obj.value)
