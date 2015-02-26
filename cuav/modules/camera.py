@@ -116,6 +116,12 @@ class ChangeCameraSettingBundle:
     def __init__(self, settings):
         self.bundle = settings
 
+class GetCameraSettingBundle:
+    '''update a image setting'''
+
+    def __init__(self, settings):
+        self.bundle = settings
+
 class ChangeImageSetting:
     '''update a image setting'''
     def __init__(self, name, value):
@@ -123,6 +129,12 @@ class ChangeImageSetting:
         self.value = value
 
 class ChangeImageSettingBundle:
+    '''update a image setting'''
+
+    def __init__(self, settings):
+        self.bundle = settings
+
+class GetImageSettingBundle:
     '''update a image setting'''
 
     def __init__(self, settings):
@@ -1094,6 +1106,16 @@ class CameraModule(mp_module.MPModule):
             pkt = CommandResponse(buf)
             buf = cPickle.dumps(pkt, cPickle.HIGHEST_PROTOCOL)
             bsend.send(buf, priority=10000)
+
+        if isinstance(obj, GetImageSettingBundle):
+            pkt = GetImageSettingBundle(self.image_settings.list())
+            buf = cPickle.dumps(pkt, cPickle.HIGHEST_PROTOCOL)
+            bsend.send(buf, priority=1000)
+
+        if isinstance(obj, GetCameraSettingBundle):
+            pkt = GetCameraSettingBundle(self.camera_settings.list())
+            buf = cPickle.dumps(pkt, cPickle.HIGHEST_PROTOCOL)
+            bsend.send(buf, priority=1000)
 
     def mavlink_packet(self, m):
         '''handle an incoming mavlink packet'''
