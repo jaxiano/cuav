@@ -1071,8 +1071,8 @@ class CameraModule(mp_module.MPModule):
             self.camera_settings.set(obj.name, obj.value)
 
         if isinstance(obj, ChangeCameraSettingBundle):
-            buf = 'REMOTE: Change Camera Setting Bundle'
-            print buf
+            buf = 'Change Camera Setting Bundle'
+            print 'REMOTE: ' + buf
             for item in obj.bundle:
                 print '   %s:%s' % (item[0], item[1])
                 self.camera_settings.set(item[0], item[1])
@@ -1085,8 +1085,8 @@ class CameraModule(mp_module.MPModule):
             self.image_settings.set(obj.name, obj.value)
 
         if isinstance(obj, ChangeImageSettingBundle):
-            buf = 'REMOTE: Change Image Setting Bundle'
-            print buf
+            buf = 'Change Image Setting Bundle'
+            print 'REMOTE: ' + buf
             for item in obj.bundle:
                 print '   %s:%s' % (item[0], item[1])
                 self.image_settings.set(item[0], item[1])
