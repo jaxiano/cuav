@@ -116,6 +116,12 @@ class ChangeImageSetting:
         self.name = name
         self.value = value
 
+class ChangeImageSettingBundle:
+    '''update a image setting'''
+
+    def __init__(self, settings):
+        self.bundle = settings
+
 class BlockCancel:
     '''cancel object for callback on send1 complete'''
     def __init__(self, blockid):
@@ -1060,6 +1066,17 @@ class CameraModule(mp_module.MPModule):
 
         if isinstance(obj, ChangeImageSetting):
             self.image_settings.set(obj.name, obj.value)
+
+        if isinstance(obj, ChangeImageSettingBundle):
+            buf = 'REMOTE: Change Image Setting Bundle'
+            print buf
+            for item in obj.bundle:
+                print '   %s:%s' % (item[0], item[1])
+                self.image_settings.set(item[0], item[1])
+
+            pkt = CommandResponse(buf)
+            buf = cPickle.dumps(pkt, cPickle.HIGHEST_PROTOCOL)
+            bsend.send(buf, priority=10000)
 
     def mavlink_packet(self, m):
         '''handle an incoming mavlink packet'''
