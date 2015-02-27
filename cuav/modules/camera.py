@@ -1110,7 +1110,7 @@ class CameraModule(mp_module.MPModule):
         if isinstance(obj, GetImageSettingBundle):
             bundle = []
             for key in self.image_settings.list():
-                bundle[key.name] = self.image_settings.get_setting(key)
+                bundle[key] = self.image_settings.get_setting(key)
             pkt = GetImageSettingBundle(bundle)
             buf = cPickle.dumps(pkt, cPickle.HIGHEST_PROTOCOL)
             bsend.send(buf, priority=1000)
@@ -1118,7 +1118,7 @@ class CameraModule(mp_module.MPModule):
         if isinstance(obj, GetCameraSettingBundle):
             bundle = []
             for key in self.camera_settings.list():
-                bundle[key.name] = self.camera_settings.get(key)
+                bundle[key] = self.camera_settings.get(key)
             pkt = GetCameraSettingBundle(bundle)
             buf = cPickle.dumps(pkt, cPickle.HIGHEST_PROTOCOL)
             bsend.send(buf, priority=1000)
