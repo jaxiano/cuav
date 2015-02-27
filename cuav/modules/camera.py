@@ -8,7 +8,6 @@
 import time, threading, sys, os, numpy, Queue, errno, cPickle, signal, struct, fcntl, select, cStringIO
 import functools
 import camera_factory
-from collections import OrderedDict
 
 try:
     import cv2.cv as cv
@@ -1109,7 +1108,7 @@ class CameraModule(mp_module.MPModule):
             bsend.send(buf, priority=10000)
 
         if isinstance(obj, GetImageSettingBundle):
-            bundle = OrderedDict()
+            bundle = []
             for key in self.image_settings.list():
                 bundle[key] = self.image_settings.get(key)
             pkt = GetImageSettingBundle(bundle)
@@ -1117,7 +1116,7 @@ class CameraModule(mp_module.MPModule):
             bsend.send(buf, priority=1000)
 
         if isinstance(obj, GetCameraSettingBundle):
-            bundle = OrderedDict()
+            bundle = []
             for key in self.camera_settings.list():
                 bundle[key] = self.camera_settings.get(key)
             pkt = GetCameraSettingBundle(bundle)
