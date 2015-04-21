@@ -7,6 +7,8 @@
 
 import time, threading, sys, os, numpy, Queue, errno, cPickle, signal, struct, fcntl, select, cStringIO
 import functools
+import camera_factory
+
 try:
     import cv2.cv as cv
 except ImportError:
@@ -22,14 +24,7 @@ from MAVProxy.modules.lib import mp_image
 from cuav.camera.cam_params import CameraParams
 from MAVProxy.modules.mavproxy_map import mp_slipmap
 
-# allow for replaying of previous flights
-if os.getenv('FAKE_CHAMELEON'):
-    print("Loaded mock backend")
-    #import cuav.camera.fake_chameleon as chameleon
-    import cuav.camera.mock_flea as chameleon
-else:
-    import cuav.camera.flea as chameleon
-    #import cuav.camera.chameleon as chameleon
+chameleon = camera_factory.getCamera()
 
 class MavSocket:
     '''map block_xmit onto MAVLink data packets'''
@@ -100,8 +95,9 @@ class ImageRequest:
 
 class HeartBeat:
     '''generic heartbeat to keep bsend alive'''
-    def __init__(self):
-        pass
+    def __init__(self, state):
+        self.command = "Heartbeat"
+        self.state = state
 
 class CameraMessage:
     '''critical camera message'''
@@ -114,11 +110,45 @@ class ChangeCameraSetting:
         self.name = name
         self.value = value
 
+class ChangeCameraSettingBundle:
+    '''update a image setting'''
+
+    def __init__(self, settings):
+        self.bundle = settings
+
+class GetCameraSettingBundle:
+    '''update a image setting'''
+
+    def __init__(self, settings):
+        self.bundle = settings
+
 class ChangeImageSetting:
     '''update a image setting'''
     def __init__(self, name, value):
         self.name = name
         self.value = value
+
+class ChangeImageSettingBundle:
+    '''update a image setting'''
+
+    def __init__(self, settings):
+        self.bundle = settings
+
+class GetImageSettingBundle:
+    '''update a image setting'''
+
+    def __init__(self, settings):
+        self.bundle = settings
+
+class ChangeAutoSettings:
+    def __init__(self, settings):
+	self.settings = settings
+
+class GetAutoSettings:
+    def __init__(self):
+	'''request current auto settings'''
+	pass
+
 
 class BlockCancel:
     '''cancel object for callback on send1 complete'''
@@ -199,7 +229,8 @@ class CameraModule(mp_module.MPModule):
 
               MPSetting('brightness', float, 1.0, 'Display Brightness', range=(0.1, 10), increment=0.1,
                         digits=2, tab='Display'),
-              MPSetting('debug', bool, False, 'debug enable'),             
+              MPSetting('debug', bool, False, 'debug enable'),
+              MPSetting('lo_res_image', bool, False, 'Send 640x480 image to ground station'),
               ],
             title='Camera Settings'
             )
@@ -256,7 +287,11 @@ class CameraModule(mp_module.MPModule):
         self.last_minscore2 = None
         self.last_heartbeat = time.time()
         self.last_heartbeat2 = time.time()
-        
+	
+	self.last_image_saved = None
+	self.new_auto_settings = None       
+	self.auto_settings = None
+ 
         # setup directory for images
         if self.logdir is None:
             self.camera_dir = "camera"
@@ -349,6 +384,13 @@ class CameraModule(mp_module.MPModule):
             self.start_aircraft_bsend()
             if self.airstart_thread_h is None:
                 self.airstart_thread_h = self.start_thread(self.airstart_thread)
+	
+            ##Getting initial camera settings for clients	
+            h = chameleon.open(1, self.camera_settings.depth, self.camera_settings.capture_brightness, self.camera_settings.height, self.camera_settings.width)
+	    self.auto_settings = self.get_auto_settings(h)
+            time.sleep(0.1)
+            chameleon.close(h)
+
         else:
             print(usage)
 
@@ -387,6 +429,7 @@ class CameraModule(mp_module.MPModule):
                 chameleon.close(h)
                 time.sleep(0.5)
                 h = chameleon.open(1, self.camera_settings.depth, self.camera_settings.capture_brightness, self.camera_settings.height, self.camera_settings.width)
+	self.auto_settings = self.get_auto_settings(h)
         print('base_time=%f' % base_time)
         return h, base_time, frame_time
 
@@ -453,6 +496,16 @@ class CameraModule(mp_module.MPModule):
                     chameleon.set_framerate(h, int(self.camera_settings.framerate))
                     last_framerate = int(self.camera_settings.framerate)
 
+	        if self.new_auto_settings is not None:
+                    obj = self.new_auto_settings
+		    chameleon.set_auto_exposure(h, self.bool_to_int(obj['exposure']['auto']), self.bool_to_int(obj['exposure']['on']), float(obj['exposure']['value']))
+	            chameleon.set_auto_shutter(h, self.bool_to_int(obj['shutter']['auto']), self.bool_to_int(obj['shutter']['on']), float(obj['shutter']['value']))
+	            chameleon.set_auto_gain(h, obj['gain']['auto'], obj['gain']['on'], float(obj['gain']['value']))
+		    chameleon.set_brightness(h, float(obj['brightness']));
+		    chameleon.set_gamma(h, float(obj['gamma']));
+                    self.new_auto_settings = None 
+		    self.auto_settings = self.get_auto_settings(h)  
+
                 self.check_camera_parms()
 
                 capture_time = time.time()
@@ -498,12 +551,15 @@ class CameraModule(mp_module.MPModule):
                 last_frame_counter = frame_counter
 		time.sleep(1)
             except chameleon.error, msg:
-                print("Exception in capture thread: " + msg)
+                print("Exception in capture thread: {0} ".format(msg))
                 self.error_count += 1
                 self.error_msg = msg
         if h is not None:
             chameleon.close(h)
 
+
+    def bool_to_int(self, b):
+	return 1 if b else 0
 
     def save_thread(self):
         '''image save thread'''
@@ -517,9 +573,10 @@ class CameraModule(mp_module.MPModule):
             (frame_time,im) = self.save_queue.get()
             rawname = "raw%s" % cuav_util.frame_time(frame_time)
             frame_count += 1
-            if self.camera_settings.save_pgm != 0 and self.flying:
+            if self.camera_settings.save_pgm != 0: # and self.flying:
                 if frame_count % self.camera_settings.save_pgm == 0:
                     chameleon.save_pgm('%s/%s.pgm' % (raw_dir, rawname), im)
+		    self.last_image_saved = rawname
 
     def scan_thread(self):
         '''image scanning thread'''
@@ -711,6 +768,7 @@ class CameraModule(mp_module.MPModule):
 		    #print('send1: {0} highscore: {1} minscore: {2}'.format(self.camera_settings.send1, highscore, self.camera_settings.minscore))
                     if self.camera_settings.send1 and highscore >= self.camera_settings.minscore:
                         # send on primary link
+		        print('send1: {0} highscore: {1} minscore: {2}'.format(self.camera_settings.send1, highscore, self.camera_settings.minscore))
                         self.bsend.set_bandwidth(self.camera_settings.bandwidth)
                         self.bsend.set_packet_loss(self.camera_settings.packet_loss)
                         self.bsend.send(buf, priority=highscore, callback=functools.partial(self.send_complete, blk_cancel))
@@ -737,7 +795,9 @@ class CameraModule(mp_module.MPModule):
                 skip_count += 1
                 continue
             tx_count += 1
-            self.send_image(im_640, frame_time, pos, 0, bsend=self.bsend)
+
+            if self.camera_settings.lo_res_image:
+                self.send_image(im_640, frame_time, pos, 0, bsend=self.bsend)
 
     def best_bsend(self, who):
         '''choose the best link to use'''
@@ -1057,10 +1117,96 @@ class CameraModule(mp_module.MPModule):
             self.handle_image_request(obj, bsend)            
 
         if isinstance(obj, ChangeCameraSetting):
-            self.camera_settings.set(obj.name, obj.value)
+            print('Settings Changed {0}: {1}'.format(obj.name, obj.value))
+	    self.camera_settings.set(obj.name, obj.value)
+
+        if isinstance(obj, ChangeCameraSettingBundle):
+            buf = 'Change Camera Setting Bundle'
+            print 'REMOTE: ' + buf
+            for item in obj.bundle:
+                print '   %s:%s' % (item[0], item[1])
+                self.camera_settings.set(item[0], item[1])
+
+            pkt = CommandResponse(buf)
+            buf = cPickle.dumps(pkt, cPickle.HIGHEST_PROTOCOL)
+            bsend.send(buf, priority=10000)
 
         if isinstance(obj, ChangeImageSetting):
-            self.image_settings.set(obj.name, obj.value)
+            print('Settings Change {0}: {1}'.format(obj.name, obj.value))
+	    self.image_settings.set(obj.name, obj.value)
+
+        if isinstance(obj, ChangeImageSettingBundle):
+            buf = 'Change Image Setting Bundle'
+            print 'REMOTE: ' + buf
+            for item in obj.bundle:
+                print '   %s:%s' % (item[0], item[1])
+                self.image_settings.set(item[0], item[1])
+
+            pkt = CommandResponse(buf)
+            buf = cPickle.dumps(pkt, cPickle.HIGHEST_PROTOCOL)
+            bsend.send(buf, priority=10000)
+
+        if isinstance(obj, GetImageSettingBundle):
+            bundle = {}
+            for key in self.image_settings.list():
+                bundle[key] = self.image_settings.get(key)
+            pkt = GetImageSettingBundle(bundle)
+            buf = cPickle.dumps(pkt, cPickle.HIGHEST_PROTOCOL)
+            bsend.send(buf, priority=1000)
+
+        if isinstance(obj, GetCameraSettingBundle):
+            bundle = {}
+            for key in self.camera_settings.list():
+                bundle[key] = self.camera_settings.get(key)
+            pkt = GetCameraSettingBundle(bundle)
+            buf = cPickle.dumps(pkt, cPickle.HIGHEST_PROTOCOL)
+            bsend.send(buf, priority=1000)
+
+	if isinstance(obj, ChangeAutoSettings):
+	    buf = 'Change Auto Settings\n'
+	    buf = '{0} Exposure - value: {1} auto: {2} onOff {3}'.format(buf, obj.settings['exposure']['value'], obj.settings['exposure']['auto'], obj.settings['exposure']['on'])
+ 
+	    buf = '{0} Shutter - value: {1} auto: {2} onOff {3}'.format(buf, obj.settings['shutter']['value'], obj.settings['shutter']['auto'], obj.settings['shutter']['on'])
+
+	    buf = '{0} Gain - value: {1} auto: {2} onOff {3}'.format(buf, obj.settings['gain']['value'], obj.settings['gain']['auto'], obj.settings['gain']['on'])
+	    buf = '{0} Brightness: {1}  Gamma: {2}'.format(buf, obj.settings['brightness'], obj.settings['gamma'])
+            print buf
+	    self.new_auto_settings = obj.settings
+	    pkt = CommandResponse(buf)
+            buf = cPickle.dumps(pkt, cPickle.HIGHEST_PROTOCOL)
+            bsend.send(buf, priority=1000)
+
+	if isinstance(obj, GetAutoSettings):
+	    pkt = ChangeAutoSettings(self.auto_settings)
+	    buf = cPickle.dumps(pkt, cPickle.HIGHEST_PROTOCOL)
+  	    bsend.send(buf, priority=10000)
+
+
+    def get_auto_settings(self, h):
+	settings = {"exposure": {},
+		    "shutter": {},
+		    "gain": {},
+		    "brightness": 0.0,
+		    "gamma": 0.0}
+	settings["brightness"] = chameleon.get_brightness(h)
+	settings["gamma"] = chameleon.get_gamma(h)
+	exp = chameleon.get_auto_setting(h, "exposure")	
+        shutter = chameleon.get_auto_setting(h, "shutter")
+	gain = chameleon.get_auto_setting(h, "gain")
+
+	settings["exposure"]["auto"] = exp[0]
+	settings["exposure"]["on"] = exp[1]
+	settings["exposure"]["value"] = exp[2]
+
+	settings["shutter"]["auto"] = shutter[0]
+	settings["shutter"]["on"] = shutter[1]
+	settings["shutter"]["value"] = shutter[2]
+
+	settings["gain"]["auto"] = gain[0]
+	settings["gain"]["on"] = gain[1]
+	settings["gain"]["value"] = gain[2]
+
+	return settings
 
     def mavlink_packet(self, m):
         '''handle an incoming mavlink packet'''
@@ -1111,14 +1257,21 @@ class CameraModule(mp_module.MPModule):
 
     def handle_image_request(self, obj, bsend):
         '''handle ImageRequest from GCS'''
-        rawname = "raw%s" % cuav_util.frame_time(obj.frame_time)
+        print 'image request for frame time: {0}'.format(obj.frame_time)
+	if obj.frame_time != 0:
+	    rawname = "raw%s" % cuav_util.frame_time(obj.frame_time)
+	else:
+	    rawname = self.last_image_saved
+	    obj.frame_time = cuav_util.parse_frame_time(rawname)
+	
         raw_dir = os.path.join(self.camera_dir, "raw")
         filename = '%s/%s.pgm' % (raw_dir, rawname)
         if not os.path.exists(filename):
             print("No file: %s" % filename)
             return
         try:
-            img = cuav_util.LoadImage(filename=filename, height=self.camera_settings.height, width=self.camera_settings.width, rotate180=self.camera_settings.rotate180)
+
+	    img = cuav_util.LoadImage(filename=filename, height=self.camera_settings.height, width=self.camera_settings.width, rotate180=self.camera_settings.rotate180)
             img = numpy.asarray(cv.GetMat(img))
         except Exception:
             return
@@ -1135,6 +1288,10 @@ class CameraModule(mp_module.MPModule):
         self.start_gcs_bsend()
         if bsend is None:
             bsend = self.best_bsend('send_packet')
+
+        if isinstance(pkt, CommandPacket):
+            print "packet: %s, dest_ip: %s, dest_port: %i" % (pkt.command, bsend.dest_ip, bsend.dest_port)
+
         bsend.send(buf, priority=10000)
 
     def camera_settings_callback(self, setting):
@@ -1149,7 +1306,11 @@ class CameraModule(mp_module.MPModule):
 
     def send_heartbeat(self, bsend):
         '''send a heartbeat'''
-        pkt = HeartBeat()
+        state = [("camera_running", self.running)]
+        if self.camera_settings.debug:
+            print("camera state: %s" % state)
+
+        pkt = HeartBeat(state=state)
         self.send_packet(pkt, bsend)
 
     def send_message(self, msg, bsend=None):
