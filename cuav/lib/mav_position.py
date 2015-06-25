@@ -209,46 +209,49 @@ class MavInterpolator():
 	def position(self, t, max_deltat=0,roll=None, maxroll=45):
 		'''return a MavPosition estimate given a time'''
 		self.advance_log(t)
-			
-		# extrapolate our latitude/longitude 
-		gpst = t + self.gps_lag
-                gps_raw = self._find_msg('GLOBAL_POSITION_INT', gpst)
-                gps_timestamp = gps_raw._timestamp
-                velocity = math.sqrt((gps_raw.vx*0.01)**2 + (gps_raw.vy*0.01)**2)
-                deltat = gpst - gps_timestamp
-                (lat, lon) = cuav_util.gps_newpos(gps_raw.lat/1.0e7, gps_raw.lon/1.0e7,
+	
+		try:		
+			# extrapolate our latitude/longitude 
+			gpst = t + self.gps_lag
+                	gps_raw = self._find_msg('GLOBAL_POSITION_INT', gpst)
+                	gps_timestamp = gps_raw._timestamp
+                	velocity = math.sqrt((gps_raw.vx*0.01)**2 + (gps_raw.vy*0.01)**2)
+                	deltat = gpst - gps_timestamp
+                	(lat, lon) = cuav_util.gps_newpos(gps_raw.lat/1.0e7, gps_raw.lon/1.0e7,
                                                   gps_raw.hdg*0.01,
                                                   velocity * (gpst - gps_timestamp))
 
-		scaled_pressure = self._find_msg('SCALED_PRESSURE', t)
-                terrain_report = None
-                if len(self.terrain_report) > 0:
-                        terrain_report = self._find_msg('TERRAIN_REPORT', t)
-                        if terrain_report is not None:
-                                (tlat, tlon) = (terrain_report.lat/1.0e7, terrain_report.lon/1.0e7)
-                                # don't use it if its too far away
-                                if (cuav_util.gps_distance(lat, lon, tlat, tlon) > 150 or
-                                    abs(terrain_report._timestamp - t) > 5):
-                                        terrain_report = None
+			scaled_pressure = self._find_msg('SCALED_PRESSURE', t)
+                	terrain_report = None
+                	if len(self.terrain_report) > 0:
+                        	terrain_report = self._find_msg('TERRAIN_REPORT', t)
+                        	if terrain_report is not None:
+                                	(tlat, tlon) = (terrain_report.lat/1.0e7, terrain_report.lon/1.0e7)
+                                	# don't use it if its too far away
+                                	if (cuav_util.gps_distance(lat, lon, tlat, tlon) > 150 or
+                                    	abs(terrain_report._timestamp - t) > 5):
+                                        	terrain_report = None
 
-		# get altitude
-		altitude = self._altitude(scaled_pressure, terrain_report)
+			# get altitude
+			altitude = self._altitude(scaled_pressure, terrain_report)
 
-		# and attitude
-		mavroll  = math.degrees(self.interpolate_angle('ATTITUDE', 'roll', t, max_deltat))
-		if roll is None:
-			roll = mavroll
-		elif abs(mavroll) < maxroll:
-			roll = 0
-		elif mavroll >= maxroll:
-			roll = mavroll - maxroll
-		else:
-			roll = mavroll + maxroll
+			# and attitude
+			mavroll  = math.degrees(self.interpolate_angle('ATTITUDE', 'roll', t, max_deltat))
+			if roll is None:
+				roll = mavroll
+			elif abs(mavroll) < maxroll:
+				roll = 0
+			elif mavroll >= maxroll:
+				roll = mavroll - maxroll
+			else:
+				roll = mavroll + maxroll
 			
-		pitch = math.degrees(self.interpolate_angle('ATTITUDE', 'pitch', t, max_deltat))
-		yaw   = math.degrees(self.interpolate_angle('ATTITUDE', 'yaw', t, max_deltat))
+			pitch = math.degrees(self.interpolate_angle('ATTITUDE', 'pitch', t, max_deltat))
+			yaw   = math.degrees(self.interpolate_angle('ATTITUDE', 'yaw', t, max_deltat))
 
-		return MavPosition(lat, lon, altitude, roll, pitch, yaw, t)
+			return MavPosition(lat, lon, altitude, roll, pitch, yaw, t)
+		except Exception as exception:
+			return MavPosiiton(0.0, 0.0, 0, 0, 0, 0,t)
 	
 	def set_logfile(self, filename):
 		'''provide a mavlink logfile for data'''

@@ -174,10 +174,10 @@ static PyObject *
 flea_set_gamma(PyObject *self, PyObject *args)
 {
 	int handle = -1;
-	int gamma=0;
+	float gamma=0;
 	fleaCamera* cam = NULL;
 
-	if (!PyArg_ParseTuple(args, "ii", &handle, &gamma))
+	if (!PyArg_ParseTuple(args, "if", &handle, &gamma))
 		return NULL;
 
 	if (handle >= 0 && handle < NUM_CAMERA_HANDLES && cameras[handle]) {
@@ -190,6 +190,84 @@ flea_set_gamma(PyObject *self, PyObject *args)
 
 
 	Py_RETURN_NONE;
+}
+
+static PyObject *
+flea_get_gamma(PyObject *self, PyObject *args)
+{
+	int handle = -1;
+	fleaCamera* cam = NULL;
+	float gamma;
+
+	if (!PyArg_ParseTuple(args, "i", &handle))
+		return NULL;
+
+	if (handle >= 0 && handle < NUM_CAMERA_HANDLES && cameras[handle]) {
+		cam = cameras[handle];
+		gamma = get_gamma(cam);
+	} else {
+		PyErr_SetString(FleaError, "Invalid Handle");
+		return NULL;
+	}
+
+	return Py_BuildValue("f",gamma);
+}
+
+static PyObject *
+flea_get_brightness(PyObject *self, PyObject *args)
+{
+	int handle = -1;
+	fleaCamera* cam = NULL;
+	float brightness;
+
+	if (!PyArg_ParseTuple(args, "i", &handle))
+		return NULL;
+
+	if (handle >= 0 && handle < NUM_CAMERA_HANDLES && cameras[handle]) {
+		cam = cameras[handle];
+		brightness = get_brightness(cam);
+	} else {
+		PyErr_SetString(FleaError, "Invalid Handle");
+		return NULL;
+	}
+
+	return Py_BuildValue("f", brightness);
+}
+
+
+
+static PyObject *
+flea_get_auto_setting(PyObject *self, PyObject *args)
+{
+	int handle = -1;
+	fleaCamera* cam = NULL;
+	const char* prop_name;
+	fleaProperty prop;
+
+	if (!PyArg_ParseTuple(args, "is", &handle, &prop_name))
+		return NULL;
+
+	if (handle >= 0 && handle < NUM_CAMERA_HANDLES && cameras[handle]) {
+		cam = cameras[handle];
+		if (strcmp(prop_name, "exposure") == 0) {
+		    prop = get_exposure(cam);
+		}
+		else if (strcmp(prop_name, "shutter") == 0) {
+		    prop = get_shutter(cam);
+		}
+		else if (strcmp(prop_name, "gain") == 0) {
+		    prop = get_gain(cam);
+		}
+		else {
+		    return NULL;
+   	  	}
+	} else {
+		PyErr_SetString(FleaError, "Invalid Handle");
+		return NULL;
+	}
+
+	return Py_BuildValue("iif", prop.autoMode, prop.on, prop.value);
+
 }
 
 static PyObject *
@@ -214,13 +292,80 @@ flea_set_framerate(PyObject *self, PyObject *args)
 }
 
 static PyObject *
+flea_set_auto_exposure(PyObject *self, PyObject *args)
+{
+	int handle = -1;
+	int autoMode = 0;
+	int onOff = 0;
+	float value = 0.0;
+	fleaCamera* cam = NULL;
+
+	if (!PyArg_ParseTuple(args, "iiif", &handle, &autoMode, &onOff, &value))
+		return NULL;
+
+	if (handle >= 0 && handle < NUM_CAMERA_HANDLES && cameras[handle]) {
+		cam = cameras[handle];
+		set_exposure(cam, autoMode, onOff, value);
+	} else {
+		PyErr_SetString(FleaError, "Invalid Handle");
+		return NULL;
+	} 
+	Py_RETURN_NONE;
+}
+
+static PyObject *
+flea_set_auto_shutter(PyObject *self, PyObject *args)
+{
+	int handle = -1;
+	int autoMode = 0;
+	int onOff = 0;
+	float value = 0.0;
+	fleaCamera* cam = NULL;
+
+	if (!PyArg_ParseTuple(args, "iiif", &handle, &autoMode, &onOff, &value))
+		return NULL;
+
+	if (handle >= 0 && handle < NUM_CAMERA_HANDLES && cameras[handle]) {
+		cam = cameras[handle];
+		set_shutter(cam, autoMode, onOff, value);
+	} else {
+		PyErr_SetString(FleaError, "Invalid Handle");
+		return NULL;
+	} 
+	Py_RETURN_NONE;
+}
+
+
+static PyObject *
+flea_set_auto_gain(PyObject *self, PyObject *args)
+{
+	int handle = -1;
+	int autoMode = 0;
+	int onOff = 0;
+	float value = 0.0;
+	fleaCamera* cam = NULL;
+
+	if (!PyArg_ParseTuple(args, "iiif", &handle, &autoMode, &onOff, &value))
+		return NULL;
+
+	if (handle >= 0 && handle < NUM_CAMERA_HANDLES && cameras[handle]) {
+		cam = cameras[handle];
+		set_gain(cam, autoMode, onOff, value);
+	} else {
+		PyErr_SetString(FleaError, "Invalid Handle");
+		return NULL;
+	} 
+	Py_RETURN_NONE;
+}
+
+static PyObject *
 flea_set_brightness(PyObject *self, PyObject *args)
 {
 	int handle = -1;
-	int brightness=0;
+	float brightness=0.0;
 	fleaCamera* cam = NULL;
 
-	if (!PyArg_ParseTuple(args, "ii", &handle, &brightness))
+	if (!PyArg_ParseTuple(args, "if", &handle, &brightness))
 		return NULL;
 
 	if (handle >= 0 && handle < NUM_CAMERA_HANDLES && cameras[handle]) {
@@ -349,6 +494,12 @@ static PyMethodDef FleaMethods[] = {
   {"set_gamma", flea_set_gamma, METH_VARARGS, "set gamma"},
   {"set_framerate", flea_set_framerate, METH_VARARGS, "set framerate"},
   {"set_brightness", flea_set_brightness, METH_VARARGS, "set brightness"},
+  {"set_auto_exposure", flea_set_auto_exposure, METH_VARARGS, "set exposure"},
+  {"set_auto_shutter", flea_set_auto_shutter, METH_VARARGS, "set shutter"},
+  {"set_auto_gain", flea_set_auto_gain, METH_VARARGS, "set gain"},
+  {"get_gamma", flea_get_gamma, METH_VARARGS, "Get the gamma value from the camera"},
+  {"get_brightness", flea_get_brightness, METH_VARARGS, "Get the brightness value from the camera"},
+  {"get_auto_setting", flea_get_auto_setting, METH_VARARGS, "Get auto settings based on property name"},
   {NULL, NULL, 0, NULL}  
 };
 

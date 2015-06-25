@@ -25,6 +25,7 @@ void SetTimeStamping( fc2Context context, BOOL enableTimeStamp )
     {
         printf( "Error in fc2SetEmbeddedImageInfo: %d\n", error );
     }
+    return;
 }
 
 void PrintPropertyInfo( fc2PropertyInfo* prop)
@@ -36,6 +37,7 @@ void PrintPropertyInfo( fc2PropertyInfo* prop)
         prop->type,
         prop->min,
         prop->max);
+    return;
 }
 
 void PrintProperty( fc2Property* prop)
@@ -45,6 +47,7 @@ void PrintProperty( fc2Property* prop)
         "Value - %u\n",
         prop->type,
         prop->valueA);
+    return;
 }
 
 
@@ -74,6 +77,8 @@ void PrintCameraInfo( fc2Context context )
         camInfo.sensorResolution,
         camInfo.firmwareVersion,
         camInfo.firmwareBuildTime );
+
+    return;
 }
 
 fleaCamera* open_camera(int brightness, unsigned int height, unsigned int width)
@@ -103,7 +108,7 @@ fleaCamera* open_camera(int brightness, unsigned int height, unsigned int width)
             return NULL;
         }
     
-        set_property(camera, FC2_BRIGHTNESS, brightness);
+        //set_property_value(camera, FC2_BRIGHTNESS, brightness);
         //PrintCameraInfo( camera->context );  
         //setup_camera( camera );
         SetTimeStamping( camera->context, TRUE );      
@@ -154,26 +159,123 @@ void chkProperty(fleaCamera* camera, fc2PropertyType type)
     fc2GetProperty(camera->context, &prop);
     PrintProperty(&prop);
     
+    return;
 }
 
-void set_property(fleaCamera* camera, fc2PropertyType type, int value)
+fc2Property get_property(fleaCamera* camera, fc2PropertyType type)
+{
+	fc2Property prop;
+	prop.type = type;
+	fc2GetProperty(camera->context, &prop);
+	return prop;
+}
+
+fleaProperty get_property_as_flea(fleaCamera* camera, fc2PropertyType type)
+{
+	fc2Property prop;
+	fleaProperty fleaProp;
+	prop.type = type;
+	fc2GetProperty(camera->context, &prop);
+	fleaProp.autoMode = prop.autoManualMode;
+	fleaProp.on = prop.onOff;
+	fleaProp.value = prop.absValue;
+	return fleaProp;
+}
+
+
+void set_property_value(fleaCamera* camera, fc2PropertyType type, float value)
 {
     fc2Property prop;
     prop.type = type;
     fc2GetProperty(camera->context, &prop);
-    prop.valueA = value;
+    prop.absControl = TRUE;    
+    prop.absValue = value;
     fc2SetProperty(camera->context, &prop);    
 
+    return;
 }
 
-void set_gamma(fleaCamera* camera, int value)
+fleaProperty get_exposure(fleaCamera* camera)
 {
-    set_property(camera, FC2_GAMMA, value);
+    return get_property_as_flea(camera, FC2_AUTO_EXPOSURE);
+
 }
 
-void set_brightness(fleaCamera* camera, int value)
+void set_exposure(fleaCamera* camera, int autoMode, int onOff, float absValue)
 {
-    set_property(camera, FC2_BRIGHTNESS, value);
+    fc2Property prop;
+    prop.type = FC2_AUTO_EXPOSURE;
+    prop.onOff = onOff;
+    prop.autoManualMode = autoMode;
+    prop.absControl = TRUE;
+    prop.absValue = absValue;
+    fc2SetProperty(camera->context, &prop );
+
+    return;
+}
+
+fleaProperty get_shutter(fleaCamera* camera)
+{
+    return get_property_as_flea(camera, FC2_SHUTTER);
+}
+
+void set_shutter(fleaCamera* camera, int autoMode, int onOff, float absValue)
+{
+    fc2Property prop;
+    prop.type = FC2_SHUTTER;
+    prop.onOff = onOff;
+    prop.autoManualMode = autoMode;
+    prop.absControl = TRUE;
+    prop.absValue = absValue;
+    fc2SetProperty(camera->context, &prop );
+
+    return;
+}
+
+fleaProperty get_gain(fleaCamera* camera)
+{
+    return get_property_as_flea(camera, FC2_GAIN);
+}
+
+void set_gain(fleaCamera* camera, int autoMode, int onOff, float absValue)
+{
+    fc2Property prop;
+    prop.type = FC2_GAIN;
+    prop.onOff = onOff;
+    prop.autoManualMode = autoMode;
+    prop.absControl = TRUE;
+    prop.absValue = absValue;
+    fc2SetProperty(camera->context, &prop );
+
+    return;
+}
+
+float get_gamma(fleaCamera* camera)
+{
+	fc2Property prop;
+	prop = get_property(camera, FC2_GAMMA);
+	return prop.absValue;
+}
+
+void set_gamma(fleaCamera* camera, float value)
+{
+    set_property_value(camera, FC2_GAMMA, value);
+
+    return;
+}
+
+float get_brightness(fleaCamera* camera)
+{
+	fc2Property prop;
+	prop = get_property(camera, FC2_BRIGHTNESS);
+	return prop.absValue;
+}
+
+void set_brightness(fleaCamera* camera, float value)
+{
+    set_property_value(camera, FC2_BRIGHTNESS, value);
+
+    return;
 }
 
 
@@ -186,6 +288,7 @@ int setup_camera(fleaCamera* camera)
     chkProperty(camera, FC2_GAIN);
     chkProperty(camera, FC2_AUTO_EXPOSURE);
     
+    return 0;
 }
 
 
