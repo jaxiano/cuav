@@ -8,6 +8,7 @@
 import time, threading, sys, os, numpy, Queue, errno, cPickle, signal, struct, fcntl, select, cStringIO
 import functools
 import camera_factory
+import json, re
 
 try:
     import cv2.cv as cv
@@ -295,6 +296,9 @@ class CameraModule(mp_module.MPModule):
         self.add_completion_function('(CAMERASETTING)', self.settings.completion)
         self.add_command('remote', self.cmd_remote, "remote command", ['(COMMAND)'])
         self.add_completion_function('(CAMERASETTING)', self.camera_settings.completion)
+
+        self.restore_parms('image.parm', self.image_settings)
+        self.restore_parms('camera.parm', self.camera_settings)
         print("camera initialised")
 
     def cmd_camera(self, args):
@@ -1089,6 +1093,7 @@ class CameraModule(mp_module.MPModule):
                 print '   %s:%s' % (item[0], item[1])
                 self.camera_settings.set(item[0], item[1])
 
+            self.save_parms('camera.parm', self.camera_settings)
             pkt = CommandResponse(buf)
             buf = cPickle.dumps(pkt, cPickle.HIGHEST_PROTOCOL)
             bsend.send(buf, priority=10000)
@@ -1103,6 +1108,7 @@ class CameraModule(mp_module.MPModule):
                 print '   %s:%s' % (item[0], item[1])
                 self.image_settings.set(item[0], item[1])
 
+            self.save_parms('image.parm', self.image_settings)
             pkt = CommandResponse(buf)
             buf = cPickle.dumps(pkt, cPickle.HIGHEST_PROTOCOL)
             bsend.send(buf, priority=10000)
@@ -1122,6 +1128,24 @@ class CameraModule(mp_module.MPModule):
             pkt = GetCameraSettingBundle(bundle)
             buf = cPickle.dumps(pkt, cPickle.HIGHEST_PROTOCOL)
             bsend.send(buf, priority=1000)
+
+    def save_parms(self, filename, dict):
+        m = re.search('(.*)/logs', self.mpstate.status.logdir)
+        if m:
+            path = os.path.join(m.group(1), filename)
+            print 'Saving %s to %s' % (filename, path)
+            dict.save(path)
+        else:
+            print 'Unable to find logs directory: %s' % self.mpstate.status.logdir
+
+    def restore_parms(self, filename, dict):
+        m = re.search('(.*)/logs', self.mpstate.status.logdir)
+        if m:
+            path = os.path.join(m.group(1), filename)
+            print 'Loading %s from %s' % (filename, path)
+            dict.load(path)
+        else:
+            print 'Unable to find logs directory: %s' % self.mpstate.status.logdir
 
     def mavlink_packet(self, m):
         '''handle an incoming mavlink packet'''
