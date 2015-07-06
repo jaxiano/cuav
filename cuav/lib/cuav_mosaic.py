@@ -57,8 +57,9 @@ def CompositeThumbnail(img, regions, thumb_size=100):
     The composite will consist of N thumbnails side by side
     '''
     composite = cv.CreateImage((thumb_size*len(regions), thumb_size),8,3)
-    for i in range(len(regions)):
-        (x1,y1,x2,y2) = regions[i].tuple()
+    x0 = y = 0
+    for i,r in enumerate(regions):
+        (x1,y1,x2,y2) = r.tuple()
         midx = (x1+x2)/2
         midy = (y1+y2)/2
 
@@ -69,8 +70,14 @@ def CompositeThumbnail(img, regions, thumb_size=100):
             thumb = cv.CreateImage((thumb_size, thumb_size),8,3)
             cv.Resize(src, thumb)
         else:
+	    if x1 > x0 and x1 < x0+thumb_size and y1 > y0 and y1 < y0+thumb_size:
+		r.dupe = True
+		continue
+
             x1 = midx - thumb_size/2
             y1 = midy - thumb_size/2
+	    x0 = x1
+	    y0 = y1
             thumb = cuav_util.SubImage(img, (x1, y1, thumb_size, thumb_size))
         cv.SetImageROI(composite, (thumb_size*i, 0, thumb_size, thumb_size))
         cv.Copy(thumb, composite)

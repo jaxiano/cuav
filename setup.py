@@ -19,7 +19,7 @@ else:
         extra_compile_args=["-std=gnu99", "-O3"]
 
 scanner = Extension('cuav.image.scanner',
-                    sources = ['cuav/image/scanner.c', 'cuav/image/imageutil.c'],
+                    sources = ['cuav/image/scanner.c', 'cuav/image/imageutil.c', 'cuav/image/pic.c', 'cuav/image/pnm.c'],
 		    libraries = ['jpeg'],
                     extra_compile_args=extra_compile_args)
 ext_modules.append(scanner)

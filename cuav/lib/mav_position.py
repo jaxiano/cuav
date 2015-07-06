@@ -351,7 +351,10 @@ def exif_timestamp(filename):
         import pyexiv2        
         m = pyexiv2.ImageMetadata(filename)
         m.read()
-        return time.mktime(m['Exif.Image.DateTime'].value.timetuple())
+	if 'Exif.Image.DateTime' in m:
+		return time.mktime(m['Exif.Image.DateTime'].value.timetuple())
+	else:
+        	return m._mtime
 
 
 class KmlPosition(object):

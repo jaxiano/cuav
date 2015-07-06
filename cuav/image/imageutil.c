@@ -5,11 +5,11 @@
   Released under GNU GPL v3 or later
  */
 
-#include "include/imageutil.h"
 #include <stddef.h>
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>
+#include "include/imageutil.h"
 
 /*
   create a matrix of any dimension. The return must be cast correctly.

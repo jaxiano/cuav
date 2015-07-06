@@ -86,3 +86,24 @@ def save_pgm(filename, img):
 
 def save_file(filename, bytes):
     return chameleon.save_file(filename, bytes)
+
+def set_brightness(h):
+    pass
+
+def set_auto_exposure(h):
+    pass
+
+def set_auto_shutter(h):
+    pass
+
+def set_auto_gain(h):
+    pass
+
+def get_gamma(h):
+    pass
+
+def get_brightness(h):
+    pass
+
+def get_auto_setting(h, settings):
+    return [0,0,0]

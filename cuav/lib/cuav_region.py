@@ -11,7 +11,8 @@ class Region:
 		self.x2 = x2
 		self.y2 = y2
 		self.latlon = None
-		self.score = None
+		self.score = int(scan_score)
+		self.dupe = False
                 self.scan_score = scan_score
                 self.compactness = compactness
                 self.whiteness = None
@@ -28,6 +29,7 @@ class Region:
 
         def draw_rectangle(self, img, colour=(255,0,0), linewidth=2, offset=2):
                 '''draw a rectange around the region in an image'''
+		(r,g,b) = colour
                 (x1,y1,x2,y2) = self.tuple()
                 (wview,hview) = cuav_util.image_shape(img)
                 (w,h) = self.scan_shape
@@ -35,12 +37,12 @@ class Region:
                 x2 = x2*wview//w
                 y1 = y1*hview//h
                 y2 = y2*hview//h
-                cv.Rectangle(img, (max(x1-offset,0),max(y1-offset,0)), (x2+offset,y2+offset), colour, linewidth) 
+                cv.Rectangle(img, (max(x1-offset,0),max(y1-offset,0)), (x2+offset,y2+offset), (b,g,r), linewidth) 
 
         def __str__(self):
 		return '%s latlon=%s score=%s' % (str(self.tuple()), str(self.latlon), self.score)
 	    
-def RegionsConvert(rlist, scan_shape, full_shape, calculate_compactness=True):
+def RegionsConvert(rlist, scan_shape, full_shape, calculate_compactness=False):
 	'''convert a region list from tuple to Region format,
 	also mapping to the shape of the full image'''
 	ret = []
@@ -49,13 +51,13 @@ def RegionsConvert(rlist, scan_shape, full_shape, calculate_compactness=True):
         full_w = full_shape[0]
         full_h = full_shape[1]
 	for r in rlist:
-		(x1,y1,x2,y2,score,pixscore) = r
-		x1 = (x1 * full_w) // scan_w
-		x2 = (x2 * full_w) // scan_w
-		y1 = (y1 * full_h) // scan_h
-		y2 = (y2 * full_h) // scan_h
+		(x1,y1,x2,y2,score) = r
+		x1 = int(x1 * full_w) // scan_w
+		x2 = int(x2 * full_w) // scan_w
+		y1 = int(y1 * full_h) // scan_h
+		y2 = int(y2 * full_h) // scan_h
                 if calculate_compactness:
-                        compactness = array_compactness(pixscore)
+                        compactness = 0 #array_compactness(pixscore)
                 else:
                         compactness = 0
 		ret.append(Region(x1,y1,x2,y2, scan_shape, score, compactness))
@@ -223,10 +225,10 @@ def score_region(img, r, filter_type='simple'):
 		(w,h) = cuav_util.image_shape(img)
 		x = (x1+x2)/2
 		y = (y1+y2)/2
-		x1 = max(x-10,0)
-		x2 = min(x+10,w)
-		y1 = max(y-10,0)
-		y2 = min(y+10,h)
+		x1 = int(max(x-10,0))
+		x2 = int(min(x+10,w))
+		y1 = int(max(y-10,0))
+		y2 = int(min(y+10,h))
 	cv.SetImageROI(img, (x1, y1, x2-x1,y2-y1))
 	hsv = cv.CreateImage((x2-x1,y2-y1), 8, 3)
 	cv.CvtColor(img, hsv, cv.CV_RGB2HSV)
@@ -242,9 +244,9 @@ def filter_regions(img, regions, min_score=4, frame_time=None, filter_type='simp
 	ret = []
 	img = cv.GetImage(cv.fromarray(img))
 	for r in regions:
-		if r.score is None:
+		if r.scan_score is None:
 			score_region(img, r, filter_type=filter_type)
-		if r.score >= min_score:
+		if r.scan_score >= min_score:
 			ret.append(r)
 	return ret
 

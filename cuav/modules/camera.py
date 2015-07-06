@@ -217,7 +217,7 @@ class CameraModule(mp_module.MPModule):
               MPSetting('send2', bool, True, 'Send on Link2'),
               MPSetting('maxqueue1', int, None, 'Maximum queue Link1'),
               MPSetting('maxqueue2', int, 5, 'Maxqueue queue Link2'),
-              MPSetting('thumbsize', int, 60, 'Thumbnail Size', range=(10, 200), increment=1),
+              MPSetting('thumbsize', int, 200, 'Thumbnail Size', range=(10, 200), increment=1),
               MPSetting('mosaic_thumbsize', int, 35, 'Mosaic Thumbnail Size', range=(10, 200), increment=1),
               MPSetting('use_bsend2', bool, True, 'Enable Link2'),
               MPSetting('minspeed', int, 4, 'Min vehicle speed to save images'),
@@ -243,7 +243,8 @@ class CameraModule(mp_module.MPModule):
               MPSetting('MaxRegionSize', float, 3.0, range=(0,100), increment=0.1, digits=1),
               MPSetting('MaxRarityPct',  float, 0.02, range=(0,100), increment=0.01, digits=2),
               MPSetting('RegionMergeSize', float, 1.0, range=(0,100), increment=0.1, digits=1),
-              MPSetting('SaveIntermediate', bool, False)
+              MPSetting('SaveIntermediate', bool, False),
+	      MPSetting('Severity', int, 1)
               ],
             title='Image Settings')
 
@@ -613,7 +614,7 @@ class CameraModule(mp_module.MPModule):
                 scanner.rotate180(im_full)
             scanner.downsample(im_full, im_640)
             img_scan = im_full
-            regions = scanner.scan(img_scan, scan_parms)
+            regions = scanner.scan_python(img_scan,'ignore', scan_parms)
             if self.camera_settings.filter_type=='compactness':
                 calculate_compactness = True
             else:
@@ -629,10 +630,60 @@ class CameraModule(mp_module.MPModule):
             regions = cuav_region.filter_regions(im_full, regions,
                                                  min_score=min(self.camera_settings.minscore,self.camera_settings.minscore2),
                                                  filter_type=self.camera_settings.filter_type)
+	    self.analyzeRegions(im_full, regions)
 
             self.region_count += len(regions)
             if self.transmit_queue.qsize() < 100:
                 self.transmit_queue.put((frame_time, regions, im_full, im_640))
+
+    def analyzeRegions(self, im_full, regions):
+	mat = cv.GetMat(cv.fromarray(im_full))
+	bits = 4
+	for aregion in regions:
+		(minx,miny,maxx,maxy) = aregion.tuple()
+		hist_r = {}
+		hist_g = {}
+		hist_b = {}
+		hist = {}
+		for x in range(minx,maxx-1,1):
+		   for y in range(miny,maxy-1,1):
+			(b,g,r) = mat[y,x]
+			value = r/(1<<bits)
+			count = 0 if not hist_r.has_key(value) else hist_r[value]
+			count += 1
+			hist_r[value]=count
+
+			value = g/(1<<bits)
+			count = 0 if not hist_g.has_key(value) else hist_g[value]
+			count += 1
+			hist_g[value] = count
+
+			value = b/(1<<bits)
+			count = 0 if not hist_b.has_key(value) else hist_b[value]
+			count += 1
+			hist_b[value] = count
+		
+		hist['r'] = hist_r
+		hist['g'] = hist_g
+		hist['b'] = hist_b
+
+		severity = self.evaluateHistogram(hist)
+		color = (0,0,255) if self.image_settings.Severity==0 else severity
+		aregion.draw_rectangle(mat,colour=color)
+
+    def evaluateHistogram(self, hist):
+	rlen = len(hist['r'])
+	glen = len(hist['g'])
+	blen = len(hist['b'])
+	if (rlen+blen+glen >= 35) or \
+	   (rlen == 16 and blen >= 7) or \
+	   (rlen >= 15 and blen >= 10) or \
+	   (rlen >= 13 and blen >= 11 and glen >= 11):
+	      return (255,0,0)
+	elif rlen >= 8 and blen >= 8:
+	      return (255,255,0)
+	else:
+	      return (0,0,255)
 
     def get_plane_position(self, frame_time,roll=None):
         '''get a MavPosition object for the planes position if possible'''
@@ -769,7 +820,7 @@ class CameraModule(mp_module.MPModule):
 
                     blk_cancel = BlockCancel(None)
 
-		    #print('send1: {0} highscore: {1} minscore: {2}'.format(self.camera_settings.send1, highscore, self.camera_settings.minscore))
+		    print('send1: {0} highscore: {1} minscore: {2}'.format(self.camera_settings.send1, highscore, self.camera_settings.minscore))
                     if self.camera_settings.send1 and highscore >= self.camera_settings.minscore:
                         # send on primary link
 		        print('send1: {0} highscore: {1} minscore: {2}'.format(self.camera_settings.send1, highscore, self.camera_settings.minscore))
@@ -1176,7 +1227,7 @@ class CameraModule(mp_module.MPModule):
 
             buf = '{0} Gain - value: {1} auto: {2} onOff {3}'.format(buf, obj.settings['gain']['value'], obj.settings['gain']['auto'], obj.settings['gain']['on'])
             buf = '{0} Brightness: {1}  Gamma: {2}'.format(buf, obj.settings['brightness'], obj.settings['gamma'])
-                print buf
+            print buf
             self.new_auto_settings = obj.settings
             pkt = CommandResponse(buf)
             buf = cPickle.dumps(pkt, cPickle.HIGHEST_PROTOCOL)
