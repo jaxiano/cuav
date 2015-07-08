@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-'''camera control for ptgrey chameleon camera'''
+'''camera control for ptgrey sensor camera'''
 
 # todo:
 #    - add ability to lower score and get past images sent
@@ -25,7 +25,7 @@ from MAVProxy.modules.lib import mp_image
 from cuav.camera.cam_params import CameraParams
 from MAVProxy.modules.mavproxy_map import mp_slipmap
 
-chameleon = camera_factory.getCamera()
+sensor = camera_factory.getCamera()
 
 class MavSocket:
     '''map block_xmit onto MAVLink data packets'''
@@ -391,10 +391,10 @@ class CameraModule(mp_module.MPModule):
                 self.airstart_thread_h = self.start_thread(self.airstart_thread)
 	
             ##Getting initial camera settings for clients	
-            h = chameleon.open(1, self.camera_settings.depth, self.camera_settings.capture_brightness, self.camera_settings.height, self.camera_settings.width)
+            h = sensor.open(1, self.camera_settings.depth, self.camera_settings.capture_brightness, self.camera_settings.height, self.camera_settings.width)
 	    self.auto_settings = self.get_auto_settings(h)
             time.sleep(0.1)
-            chameleon.close(h)
+            sensor.close(h)
 
         else:
             print(usage)
@@ -415,25 +415,25 @@ class CameraModule(mp_module.MPModule):
 
         print('Opening camera')
         time.sleep(0.5)
-        h = chameleon.open(1, self.camera_settings.depth, self.camera_settings.capture_brightness, self.camera_settings.height, self.camera_settings.width)
+        h = sensor.open(1, self.camera_settings.depth, self.camera_settings.capture_brightness, self.camera_settings.height, self.camera_settings.width)
 
         print('Getting camera base_time')
         while frame_time is None:
             try:
                 im = numpy.zeros((self.camera_settings.height,self.camera_settings.width),dtype='uint8' if self.camera_settings.depth==8 else 'uint16')
                 base_time = time.time()
-                chameleon.trigger(h, False)
-                frame_time, frame_counter, shutter = chameleon.capture(h, 1000, im)
+                sensor.trigger(h, False)
+                frame_time, frame_counter, shutter = sensor.capture(h, 1000, im)
                 base_time -= frame_time
-            except chameleon.error, msg:
+            except sensor.error, msg:
                 print('failed to capture: {0}'.format(msg))
                 error_count += 1
             if error_count > 3:
                 error_count = 0
                 print('re-opening camera')
-                chameleon.close(h)
+                sensor.close(h)
                 time.sleep(0.5)
-                h = chameleon.open(1, self.camera_settings.depth, self.camera_settings.capture_brightness, self.camera_settings.height, self.camera_settings.width)
+                h = sensor.open(1, self.camera_settings.depth, self.camera_settings.capture_brightness, self.camera_settings.height, self.camera_settings.width)
 	self.auto_settings = self.get_auto_settings(h)
         print('base_time=%f' % base_time)
         return h, base_time, frame_time
@@ -472,7 +472,7 @@ class CameraModule(mp_module.MPModule):
         while not self.unload_event.wait(0.02):
             if not self.running:            
                 if h is not None:
-                    chameleon.close(h)
+                    sensor.close(h)
                     h = None
                 continue
 
@@ -480,7 +480,7 @@ class CameraModule(mp_module.MPModule):
                 if h is not None and last_successful_capture is not None and time.time() - last_successful_capture > 5:
                     self.send_message("Closing camera")
                     print("Closing camera")
-                    chameleon.close(h)
+                    sensor.close(h)
                     h = None
                     last_successful_capture = None
 
@@ -488,26 +488,26 @@ class CameraModule(mp_module.MPModule):
                     h, base_time, last_frame_time = self.get_base_time()
                     last_capture_frame_time = last_frame_time
                     # put into continuous mode
-                    chameleon.trigger(h, True)
+                    sensor.trigger(h, True)
 
                 if self.camera_settings.depth == 16:
                     im = numpy.zeros((self.camera_settings.height, self.camera_settings.width),dtype='uint16')
                 else:
                     im = numpy.zeros((self.camera_settings.height, self.camera_settings.width),dtype='uint8')
                 if last_gamma != self.camera_settings.gamma:
-                    chameleon.set_gamma(h, self.camera_settings.gamma)
+                    sensor.set_gamma(h, self.camera_settings.gamma)
                     last_gamma = self.camera_settings.gamma
                 if last_framerate != int(self.camera_settings.framerate):
-                    chameleon.set_framerate(h, int(self.camera_settings.framerate))
+                    sensor.set_framerate(h, int(self.camera_settings.framerate))
                     last_framerate = int(self.camera_settings.framerate)
 
 	        if self.new_auto_settings is not None:
                     obj = self.new_auto_settings
-		    chameleon.set_auto_exposure(h, self.bool_to_int(obj['exposure']['auto']), self.bool_to_int(obj['exposure']['on']), float(obj['exposure']['value']))
-	            chameleon.set_auto_shutter(h, self.bool_to_int(obj['shutter']['auto']), self.bool_to_int(obj['shutter']['on']), float(obj['shutter']['value']))
-	            chameleon.set_auto_gain(h, obj['gain']['auto'], obj['gain']['on'], float(obj['gain']['value']))
-		    chameleon.set_brightness(h, float(obj['brightness']));
-		    chameleon.set_gamma(h, float(obj['gamma']));
+		    sensor.set_auto_exposure(h, self.bool_to_int(obj['exposure']['auto']), self.bool_to_int(obj['exposure']['on']), float(obj['exposure']['value']))
+	            sensor.set_auto_shutter(h, self.bool_to_int(obj['shutter']['auto']), self.bool_to_int(obj['shutter']['on']), float(obj['shutter']['value']))
+	            sensor.set_auto_gain(h, obj['gain']['auto'], obj['gain']['on'], float(obj['gain']['value']))
+		    sensor.set_brightness(h, float(obj['brightness']));
+		    sensor.set_gamma(h, float(obj['gamma']));
                     self.new_auto_settings = None 
 		    self.auto_settings = self.get_auto_settings(h)  
 
@@ -516,7 +516,7 @@ class CameraModule(mp_module.MPModule):
                 capture_time = time.time()
                 
                 # capture an image
-                frame_time, frame_counter, shutter = chameleon.capture(h, 1000, im)
+                frame_time, frame_counter, shutter = sensor.capture(h, 1000, im)
                 if frame_time < last_capture_frame_time:
                     base_time += 128
                 last_capture_frame_time = frame_time
@@ -555,12 +555,12 @@ class CameraModule(mp_module.MPModule):
                 last_frame_time = frame_time
                 last_frame_counter = frame_counter
 		time.sleep(1)
-            except chameleon.error, msg:
+            except sensor.error, msg:
                 print("Exception in capture thread: {0} ".format(msg))
                 self.error_count += 1
                 self.error_msg = msg
         if h is not None:
-            chameleon.close(h)
+            sensor.close(h)
 
 
     def bool_to_int(self, b):
@@ -580,7 +580,7 @@ class CameraModule(mp_module.MPModule):
             frame_count += 1
             if self.camera_settings.save_pgm != 0: # and self.flying:
                 if frame_count % self.camera_settings.save_pgm == 0:
-                    chameleon.save_pgm('%s/%s.pgm' % (raw_dir, rawname), im)
+                    sensor.save_pgm('%s/%s.pgm' % (raw_dir, rawname), im)
 		    self.last_image_saved = rawname
 
     def scan_thread(self):
@@ -1040,7 +1040,7 @@ class CameraModule(mp_module.MPModule):
 
                 # save the thumbnails
                 thumb_filename = '%s/v%s.jpg' % (thumb_dir, cuav_util.frame_time(obj.frame_time))
-                chameleon.save_file(thumb_filename, obj.thumb)
+                sensor.save_file(thumb_filename, obj.thumb)
                 composite = cv.LoadImage(thumb_filename)
                 if composite is None:
                     continue
@@ -1075,7 +1075,7 @@ class CameraModule(mp_module.MPModule):
 
                 # save it to disk
                 filename = '%s/v%s.jpg' % (view_dir, cuav_util.frame_time(obj.frame_time))
-                chameleon.save_file(filename, obj.jpeg)
+                sensor.save_file(filename, obj.jpeg)
                 img = cv.LoadImage(filename)
                 if img is None:
                     continue
@@ -1245,11 +1245,11 @@ class CameraModule(mp_module.MPModule):
                 "gain": {},
                 "brightness": 0.0,
                 "gamma": 0.0}
-        settings["brightness"] = chameleon.get_brightness(h)
-        settings["gamma"] = chameleon.get_gamma(h)
-        exp = chameleon.get_auto_setting(h, "exposure")
-        shutter = chameleon.get_auto_setting(h, "shutter")
-        gain = chameleon.get_auto_setting(h, "gain")
+        settings["brightness"] = sensor.get_brightness(h)
+        settings["gamma"] = sensor.get_gamma(h)
+        exp = sensor.get_auto_setting(h, "exposure")
+        shutter = sensor.get_auto_setting(h, "shutter")
+        gain = sensor.get_auto_setting(h, "gain")
 
         settings["exposure"]["auto"] = exp[0]
         settings["exposure"]["on"] = exp[1]
