@@ -182,7 +182,7 @@ class CameraModule(mp_module.MPModule):
 
         from MAVProxy.modules.lib.mp_settings import MPSettings, MPSetting
         self.camera_settings = MPSettings(
-            [ MPSetting('depth', int, 8, 'Image Depth', choice=['8', '16'], tab='Capture'),
+            [ MPSetting('depth', int, 8, 'Image Depth'),
               MPSetting('save_pgm', bool, True, 'Save Raw Images'),
               MPSetting('capture_brightness', int, 150, 'Capture Brightness', range=(10, 300), increment=1),
               MPSetting('gamma', int, 950, 'Capture Gamma', range=(0,1000), increment=1),
@@ -545,8 +545,11 @@ class CameraModule(mp_module.MPModule):
                                                         self.camera_settings.gamma))
                 gammalog.flush()
 
+		print "Pushing image to save queue"
                 self.save_queue.put((img_time,im))
+		print "Pushing image to scan queue"
                 self.scan_queue.put((img_time,im))
+		print "Save frame state" 
                 self.capture_count += 1
                 self.fps = 1.0/(frame_time - last_frame_time)
 
@@ -554,14 +557,17 @@ class CameraModule(mp_module.MPModule):
                     self.framerate = 1.0 / (frame_time - last_frame_time)
                 last_frame_time = frame_time
                 last_frame_counter = frame_counter
+		print "capture_count:%i, fps:%f, last_frame_time:%i, last_frame_counter:%i" % (self.capture_count,self.fps,last_frame_time,last_frame_counter)
+		print "Going to Sleep"
 		time.sleep(1)
+		print "Woke up"
             except sensor.error, msg:
                 print("Exception in capture thread: {0} ".format(msg))
                 self.error_count += 1
                 self.error_msg = msg
         if h is not None:
             sensor.close(h)
-
+	print "Leaving capture_thread"
 
     def bool_to_int(self, b):
 	return 1 if b else 0
@@ -569,6 +575,7 @@ class CameraModule(mp_module.MPModule):
     def save_thread(self):
         '''image save thread'''
         raw_dir = os.path.join(self.camera_dir, "raw")
+	print "save_thread raw_dir: %s" % raw_dir
         cuav_util.mkdir_p(raw_dir)
         frame_count = 0
         while not self.unload_event.wait(0.02):
@@ -577,6 +584,7 @@ class CameraModule(mp_module.MPModule):
 
             (frame_time,im) = self.save_queue.get()
             rawname = "raw%s" % cuav_util.frame_time(frame_time)
+	    print "save_thread rawname: %s" % rawname
             frame_count += 1
             if self.camera_settings.save_pgm != 0: # and self.flying:
                 if frame_count % self.camera_settings.save_pgm == 0:
@@ -607,20 +615,27 @@ class CameraModule(mp_module.MPModule):
                 scan_parms['MetersPerPixel'] = self.camera_settings.mpp100 * altitude / 100.0
             
             t1 = time.time()
+
             im_full = numpy.zeros((self.camera_settings.height, self.camera_settings.width,3),dtype='uint8')
-            im_640 = numpy.zeros((self.camera_settings.height/2,self.camera_settings.width/2,3),dtype='uint8')
-            scanner.debayer(im, im_full)
-            if self.camera_settings.rotate180:
-                scanner.rotate180(im_full)
-            scanner.downsample(im_full, im_640)
-            img_scan = im_full
-            regions = scanner.scan_python(img_scan,'ignore', scan_parms)
+            #im_640 = numpy.zeros((self.camera_settings.height/2,self.camera_settings.width/2,3),dtype='uint8')
+            #scanner.debayer(im, im_full)
+            #if self.camera_settings.rotate180:
+            #    scanner.rotate180(im_full)
+            #scanner.downsample(im_full, im_640)
+            #img_scan = im_full
+
+	    fake = 'cuav/tests/test-tau.png'
+	    filename=os.path.realpath(fake)
+	    scanner.png_raw_to_bgr(im_full, filename)
+	    #im_full = im.data
+
+            regions = scanner.scan_python(im_full,'ignore', scan_parms)
             if self.camera_settings.filter_type=='compactness':
                 calculate_compactness = True
             else:
                 calculate_compactness = False
             regions = cuav_region.RegionsConvert(regions,
-                                                 cuav_util.image_shape(img_scan),
+                                                 cuav_util.image_shape(im_full),
                                                  cuav_util.image_shape(im_full),
                                                  calculate_compactness)
             t2 = time.time()
@@ -634,7 +649,7 @@ class CameraModule(mp_module.MPModule):
 
             self.region_count += len(regions)
             if self.transmit_queue.qsize() < 100:
-                self.transmit_queue.put((frame_time, regions, im_full, im_640))
+                self.transmit_queue.put((frame_time, regions, im_full, None))
 
     def analyzeRegions(self, im_full, regions):
 	mat = cv.GetMat(cv.fromarray(im_full))

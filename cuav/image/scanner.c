@@ -4,7 +4,9 @@
  */
 
 #ifndef scanner_h
+	#include <png.h>
 	#include "include/scanner.h"
+	#include "include/pngutil.h"
 #endif
 
 #if SHOW_TIMING
@@ -1839,6 +1841,87 @@ scanner_save_pnm_grey(PyObject *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
+
+static PyObject *
+scanner_png_raw_to_bgr(PyObject *self, PyObject *args)
+{
+	printf("In scanner::png_raw_to_pgr\n");
+	PyArrayObject *img_out;
+	PyStringObject *file;
+
+	printf("Parsing args tuple\n");
+	if(!PyArg_ParseTuple(args, "OS", &img_out, &file))
+		return NULL;
+
+	CHECK_CONTIGUOUS(img_out);
+
+	printf("Casting arguments\n");
+	const char *path = PyString_AS_STRING(file);
+	uint16_t height = PyArray_DIM(img_out, 0);
+	uint16_t width = PyArray_DIM(img_out, 1);
+	
+	printf("filename: %s, width: %i, height: %i\n", path, width, height);
+
+	if(PyArray_STRIDE(img_out, 0) != 3*width){
+		PyErr_SetString(ScannerError, "output must be BGR 24 bit");
+		return NULL;
+	}
+
+	FILE *fp = fopen(path, "rb");
+	if(fp == 0){
+		PyErr_SetString(ScannerError, "path not found");
+		return NULL;
+	}
+	
+	png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, 0, 0, 0);
+	if(png_ptr == 0){
+		PyErr_SetString(ScannerError, "png_create_read_struct failed");
+		fclose(fp);
+		return NULL;
+	}
+
+	png_infop info_ptr = png_create_info_struct(png_ptr);
+	if(info_ptr == 0){
+		PyErr_SetString(ScannerError, "png_create_info_struct failed");
+		png_destroy_read_struct(&png_ptr, 0, 0);
+		fclose(fp);
+		return NULL;
+	}
+
+	if(setjmp(png_jmpbuf(png_ptr))){
+		PyErr_SetString(ScannerError, "png_jmpbuf failed");
+		png_destroy_read_struct(&png_ptr, &info_ptr, 0);
+		fclose(fp);
+		return NULL;
+	}
+
+	png_init_io(png_ptr, fp);
+	printf("initialized png_init_io\n");
+
+	//png_unknown_chunk userChunk;
+	//png_set_read_user_chunk_fn(png_ptr, (void *)&userChunk, read_chunk_callback);
+	png_read_png(png_ptr, info_ptr, PNG_TRANSFORM_EXPAND, 0);
+	
+	printf("Calling doExtractCanonicalData\n");
+	unsigned char *bgr = doExtractCanonicalData(png_ptr, info_ptr);
+	if(!bgr){
+		PyErr_SetString(ScannerError, "doExtractCanonicalData failed");
+		png_destroy_read_struct(&png_ptr, &info_ptr, 0);
+		fclose(fp);
+		return NULL;
+	}
+	int size = height*width*3;
+	printf("Prepping img_out size: %i\n", size);
+	memcpy(PyArray_DATA(img_out), bgr, size);
+
+	png_destroy_read_struct(&png_ptr, &info_ptr, 0);
+	free(bgr);
+	fclose(fp);
+
+	printf("img_out is ready to go\n");
+	Py_RETURN_NONE;	
+}
+
 static PyMethodDef ScannerMethods[] = {
 	{"debayer_half", scanner_debayer_half, METH_VARARGS, "simple debayer of image to half size 24 bit"},
 	{"debayer", scanner_debayer, METH_VARARGS, "debayer of image to full size 24 bit image"},
@@ -1854,6 +1937,7 @@ static PyMethodDef ScannerMethods[] = {
 	{"thermal_convert", scanner_thermal_convert, METH_VARARGS, "convert 16 bit thermal image to colour"},
 	{"scan_python", scanner_scan_python, METH_VARARGS, "histogram scan a color image"},
 	{"save_pnm_grey", scanner_save_pnm_grey, METH_VARARGS, "Save image as greyscale"},
+	{"png_raw_to_bgr", scanner_png_raw_to_bgr, METH_VARARGS, "Convert Sightline Raw 16-bit PNG to 24-bit BGR"},
 	{NULL, NULL, 0, NULL}
 };
 

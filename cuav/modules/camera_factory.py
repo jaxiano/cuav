@@ -12,6 +12,9 @@ if os.getenv('FAKE_CHAMELEON'):
     elif settings.camera == "flea":
        print("Loaded flea mock backend")
        import cuav.camera.mock_flea as sensor
+    elif settings.camera == "tau":
+       print("Loaded tau mock backend")
+       import cuav.camera.mock_tau as sensor
 else:
     if settings.camera == "flea":
        print("Loaded flea backend")
