@@ -45,7 +45,9 @@ def init_flea():
    	ext_modules.append(flea)
 
 def init_tau():
-	tau = Extension('cuav.camera.tau')
+	tau = Extension('cuav.camera.tau',
+			sources = [],
+			libraries = [])
 	ext_modules.append(tau)
 
 def build_config(camera_type):
@@ -55,7 +57,7 @@ def build_config(camera_type):
         init_flea()
         src = "cuav/settings/settings_flea.py"
     elif camera_type == "tau":
-	init_flea()
+	init_tau()
 	src = "cuav/settings/settings_tau.py"
     else:
         init_chameleon()
@@ -129,7 +131,7 @@ setup (name = 'cuav',
         ext_modules = ext_modules,
 	cmdclass={
 		'flea':Flea
-		#'tau':Tau
+		,'tau':Tau
 		#,'chameleon':Chameleon
 	}
 )
