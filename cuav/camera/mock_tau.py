@@ -39,7 +39,7 @@ def trigger(h, continuous):
 def load_image(filename):
     print "tau::load_image"
 
-def capture(h, timeout, img):
+def capture(h, timeout):
     print "tau::capture"
     global continuous_mode, trigger_time, frame_rate, frame_counter, fake, last_frame_time, image_height, image_width 
     print "tau::capture Calculate time of capture"
@@ -51,20 +51,19 @@ def capture(h, timeout, img):
     # wait for a new image to appear
     print "tau::capture Resolving to realpath"
     filename = os.path.realpath(fake)
-    print 'filename: %s' % filename
 
     try:
-	print "tau::capture Allocating memory for bgr"
+	print "tau::capture Allocating memory for bgr height:%i, width:%i, filename:%s" % (image_height, image_width, filename)
 	bgr = numpy.zeros((image_height,image_width,3),dtype='uint8')
 	print 'tau::capture calling convert_png_raw_to_bgr'
-	#scanner.png_raw_to_bgr(bgr, filename)
+	scanner.png_raw_to_bgr(bgr, filename)
     except Exception, msg:
         raise chameleon.error('missing %s' % fake)
-    img.data = bgr
+    print"tau::capture img shape height:%i,width%i" % (bgr.shape[0],bgr.shape[1])
     frame_counter += 1
     trigger_time = time.time()
     print "trigger_time:%i, frame_counter:%i" % (trigger_time, frame_counter) 
-    return trigger_time, frame_counter, 0
+    return trigger_time, frame_counter, 0, bgr 
 
 def close(h):
     print "tau::close"

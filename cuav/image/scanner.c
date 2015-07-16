@@ -1778,6 +1778,7 @@ scanner_scan_python(PyObject *self, PyObject *args)
 
         uint16_t height = PyArray_DIM(img_in, 0);
         uint16_t width  = PyArray_DIM(img_in, 1);
+
 	if (PyArray_STRIDE(img_in, 0) != 3*width) {
 		PyErr_SetString(ScannerError, "input must be BGR 24 bit");
 		return NULL;
@@ -1845,7 +1846,6 @@ scanner_save_pnm_grey(PyObject *self, PyObject *args)
 static PyObject *
 scanner_png_raw_to_bgr(PyObject *self, PyObject *args)
 {
-	printf("In scanner::png_raw_to_pgr\n");
 	PyArrayObject *img_out;
 	PyStringObject *file;
 

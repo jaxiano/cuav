@@ -420,10 +420,13 @@ class CameraModule(mp_module.MPModule):
         print('Getting camera base_time')
         while frame_time is None:
             try:
-                im = numpy.zeros((self.camera_settings.height,self.camera_settings.width),dtype='uint8' if self.camera_settings.depth==8 else 'uint16')
+                #im = numpy.zeros((self.camera_settings.height,self.camera_settings.width),dtype='uint8' if self.camera_settings.depth==8 else 'uint16')
                 base_time = time.time()
                 sensor.trigger(h, False)
-                frame_time, frame_counter, shutter = sensor.capture(h, 1000, im)
+                frame_time, frame_counter, shutter, bgr = sensor.capture(h, 1000)
+		self.camera_settings.height = bgr.shape[0]
+		self.camera_settings.width = bgr.shape[1]
+		self.camera_settings.depth = bgr.shape[2]
                 base_time -= frame_time
             except sensor.error, msg:
                 print('failed to capture: {0}'.format(msg))
@@ -490,10 +493,11 @@ class CameraModule(mp_module.MPModule):
                     # put into continuous mode
                     sensor.trigger(h, True)
 
-                if self.camera_settings.depth == 16:
-                    im = numpy.zeros((self.camera_settings.height, self.camera_settings.width),dtype='uint16')
-                else:
-                    im = numpy.zeros((self.camera_settings.height, self.camera_settings.width),dtype='uint8')
+                #if self.camera_settings.depth == 16:
+                #    im = numpy.zeros((self.camera_settings.height, self.camera_settings.width),dtype='uint16')
+                #else:
+                #    im = numpy.zeros((self.camera_settings.height, self.camera_settings.width),dtype='uint8')
+
                 if last_gamma != self.camera_settings.gamma:
                     sensor.set_gamma(h, self.camera_settings.gamma)
                     last_gamma = self.camera_settings.gamma
@@ -516,7 +520,11 @@ class CameraModule(mp_module.MPModule):
                 capture_time = time.time()
                 
                 # capture an image
-                frame_time, frame_counter, shutter = sensor.capture(h, 1000, im)
+                frame_time, frame_counter, shutter, bgr = sensor.capture(h, 1000)
+		self.camera_settings.height = bgr.shape[0]
+		self.camera_settings.width = bgr.shape[1]
+		self.camera_settings.depth = bgr.shape[2]
+
                 if frame_time < last_capture_frame_time:
                     base_time += 128
                 last_capture_frame_time = frame_time
@@ -545,11 +553,8 @@ class CameraModule(mp_module.MPModule):
                                                         self.camera_settings.gamma))
                 gammalog.flush()
 
-		print "Pushing image to save queue"
-                self.save_queue.put((img_time,im))
-		print "Pushing image to scan queue"
-                self.scan_queue.put((img_time,im))
-		print "Save frame state" 
+                self.save_queue.put((img_time, bgr))
+                self.scan_queue.put((img_time, bgr))
                 self.capture_count += 1
                 self.fps = 1.0/(frame_time - last_frame_time)
 
@@ -558,16 +563,13 @@ class CameraModule(mp_module.MPModule):
                 last_frame_time = frame_time
                 last_frame_counter = frame_counter
 		print "capture_count:%i, fps:%f, last_frame_time:%i, last_frame_counter:%i" % (self.capture_count,self.fps,last_frame_time,last_frame_counter)
-		print "Going to Sleep"
 		time.sleep(1)
-		print "Woke up"
             except sensor.error, msg:
                 print("Exception in capture thread: {0} ".format(msg))
                 self.error_count += 1
                 self.error_msg = msg
         if h is not None:
             sensor.close(h)
-	print "Leaving capture_thread"
 
     def bool_to_int(self, b):
 	return 1 if b else 0
@@ -575,7 +577,6 @@ class CameraModule(mp_module.MPModule):
     def save_thread(self):
         '''image save thread'''
         raw_dir = os.path.join(self.camera_dir, "raw")
-	print "save_thread raw_dir: %s" % raw_dir
         cuav_util.mkdir_p(raw_dir)
         frame_count = 0
         while not self.unload_event.wait(0.02):
@@ -584,7 +585,6 @@ class CameraModule(mp_module.MPModule):
 
             (frame_time,im) = self.save_queue.get()
             rawname = "raw%s" % cuav_util.frame_time(frame_time)
-	    print "save_thread rawname: %s" % rawname
             frame_count += 1
             if self.camera_settings.save_pgm != 0: # and self.flying:
                 if frame_count % self.camera_settings.save_pgm == 0:
@@ -597,8 +597,8 @@ class CameraModule(mp_module.MPModule):
             try:
                 # keep the queue size below 100, so we don't run out of memory
                 if self.scan_queue.qsize() > 100:
-                    (frame_time,im) = self.scan_queue.get(timeout=0.2)
-                (frame_time,im) = self.scan_queue.get(timeout=0.2)
+                    (frame_time,bgr) = self.scan_queue.get(timeout=0.2)
+                (frame_time,bgr) = self.scan_queue.get(timeout=0.2)
             except Queue.Empty:
                 continue
 
@@ -616,7 +616,7 @@ class CameraModule(mp_module.MPModule):
             
             t1 = time.time()
 
-            im_full = numpy.zeros((self.camera_settings.height, self.camera_settings.width,3),dtype='uint8')
+            #im_full = numpy.zeros((self.camera_settings.height, self.camera_settings.width,3),dtype='uint8')
             #im_640 = numpy.zeros((self.camera_settings.height/2,self.camera_settings.width/2,3),dtype='uint8')
             #scanner.debayer(im, im_full)
             #if self.camera_settings.rotate180:
@@ -624,35 +624,35 @@ class CameraModule(mp_module.MPModule):
             #scanner.downsample(im_full, im_640)
             #img_scan = im_full
 
-	    fake = 'cuav/tests/test-tau.png'
-	    filename=os.path.realpath(fake)
-	    scanner.png_raw_to_bgr(im_full, filename)
-	    #im_full = im.data
+	    #fake = 'cuav/tests/test-tau.png'
+	    #filename=os.path.realpath(fake)
+	    #scanner.png_raw_to_bgr(im_full, filename)
+	    #im_full = bgr
 
-            regions = scanner.scan_python(im_full,'ignore', scan_parms)
+            regions = scanner.scan_python(bgr,'ignore', scan_parms)
             if self.camera_settings.filter_type=='compactness':
                 calculate_compactness = True
             else:
                 calculate_compactness = False
             regions = cuav_region.RegionsConvert(regions,
-                                                 cuav_util.image_shape(im_full),
-                                                 cuav_util.image_shape(im_full),
+                                                 cuav_util.image_shape(bgr),
+                                                 cuav_util.image_shape(bgr),
                                                  calculate_compactness)
             t2 = time.time()
             self.scan_fps = 1.0 / (t2-t1)
             self.scan_count += 1
 
-            regions = cuav_region.filter_regions(im_full, regions,
+            regions = cuav_region.filter_regions(bgr, regions,
                                                  min_score=min(self.camera_settings.minscore,self.camera_settings.minscore2),
                                                  filter_type=self.camera_settings.filter_type)
-	    self.analyzeRegions(im_full, regions)
+	    self.analyzeRegions(bgr, regions)
 
             self.region_count += len(regions)
             if self.transmit_queue.qsize() < 100:
-                self.transmit_queue.put((frame_time, regions, im_full, None))
+                self.transmit_queue.put((frame_time, regions, bgr, None))
 
-    def analyzeRegions(self, im_full, regions):
-	mat = cv.GetMat(cv.fromarray(im_full))
+    def analyzeRegions(self, bgr, regions):
+	mat = cv.GetMat(cv.fromarray(bgr))
 	bits = 4
 	for aregion in regions:
 		(minx,miny,maxx,maxy) = aregion.tuple()
@@ -783,7 +783,7 @@ class CameraModule(mp_module.MPModule):
                 self.check_send_newscore()
                 continue
 
-            (frame_time, regions, im_full, im_640) = self.transmit_queue.get()
+            (frame_time, regions, bgr, im_640) = self.transmit_queue.get()
             
 	    
             if self.camera_settings.roll_stabilised:
@@ -798,7 +798,7 @@ class CameraModule(mp_module.MPModule):
             # filter out any regions outside the boundary
             if self.boundary_polygon:
                 regions = cuav_region.filter_boundary(regions, self.boundary_polygon, pos)
-                regions = cuav_region.filter_regions(im_full, regions, min_score=self.camera_settings.minscore,
+                regions = cuav_region.filter_regions(bgr, regions, min_score=self.camera_settings.minscore,
                                                      filter_type=self.camera_settings.filter_type)
 
             self.xmit_queue = self.bsend.sendq_size()
@@ -823,7 +823,7 @@ class CameraModule(mp_module.MPModule):
                 
                 if self.camera_settings.transmit:
                     # send a region message with thumbnails to the ground station
-                    thumb_img = cuav_mosaic.CompositeThumbnail(cv.GetImage(cv.fromarray(im_full)),
+                    thumb_img = cuav_mosaic.CompositeThumbnail(cv.GetImage(cv.fromarray(bgr)),
                                                                regions,
                                                                thumb_size=self.camera_settings.thumbsize)
                     thumb = scanner.jpeg_compress(numpy.ascontiguousarray(cv.GetMat(thumb_img)), self.camera_settings.quality)

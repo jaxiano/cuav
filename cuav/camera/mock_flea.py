@@ -34,6 +34,7 @@ def trigger(h, continuous):
 
 
 def load_image(filename):
+    print "Loading mock file: %s" % filename
     if filename.endswith('.pgm'):
         fake_img = cuav_util.PGM(filename)
         return fake_img.array
@@ -44,7 +45,7 @@ def load_image(filename):
     return grey
     
 
-def capture(h, timeout, img):
+def capture(h, timeout):
     global continuous_mode, trigger_time, frame_rate, frame_counter, fake, last_frame_time
     tnow = time.time()
     due = trigger_time + (1.0/frame_rate)
@@ -56,12 +57,21 @@ def capture(h, timeout, img):
 
     try:
         fake_img = load_image(filename)
+	print 'flea::capture converting raw to bgr'
+	bgr = convertRawToBGR(fake_img)
     except Exception, msg:
         raise chameleon.error('missing %s' % fake)
     frame_counter += 1
-    img.data = fake_img.data
     trigger_time = time.time()
-    return trigger_time, frame_counter, 0
+    print 'flea::capture returning data'
+    return trigger_time, frame_counter, 0, bgr
+
+def convertRawToBGR(img):
+    global image_width, image_height
+    bgr = numpy.zeros((image_height,image_width,3),dtype='uint8')
+    print 'flea::convertRawToBGR debayer'
+    scanner.debayer(img, bgr)
+    return bgr
 
 def close(h):
     return

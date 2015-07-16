@@ -128,8 +128,8 @@ setup (name = 'cuav',
                                    'camera/include/*.h']},
         ext_modules = ext_modules,
 	cmdclass={
-		#'flea':Flea
-		'tau':Tau
+		'flea':Flea
+		#'tau':Tau
 		#,'chameleon':Chameleon
 	}
 )
