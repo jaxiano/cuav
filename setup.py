@@ -45,7 +45,7 @@ def init_flea():
    	ext_modules.append(flea)
 
 def init_tau():
-	tau = Extension('cuav.camera.tau',
+	tau = Extension('',
 			sources = [],
 			libraries = [])
 	ext_modules.append(tau)

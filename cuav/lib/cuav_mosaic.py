@@ -57,7 +57,7 @@ def CompositeThumbnail(img, regions, thumb_size=100):
     The composite will consist of N thumbnails side by side
     '''
     composite = cv.CreateImage((thumb_size*len(regions), thumb_size),8,3)
-    x0 = y = 0
+    x0 = y0 = 0
     for i,r in enumerate(regions):
         (x1,y1,x2,y2) = r.tuple()
         midx = (x1+x2)/2
