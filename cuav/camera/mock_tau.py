@@ -84,8 +84,9 @@ def set_framerate(h, framerate):
     else:
         frame_rate = 1.875;
 
-def save_pgm(filename, img):
-    return chameleon.save_pgm(filename, img)
+def save_pgm(filename, bgr):
+    mat = cv.GetMat(cv.fromarray(bgr))
+    return cv.SaveImage(filename, mat)
 
 def save_file(filename, bytes):
     return chameleon.save_file(filename, bytes)

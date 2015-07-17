@@ -1,1 +1,1 @@
-camera = "flea"
+camera = "tau"
