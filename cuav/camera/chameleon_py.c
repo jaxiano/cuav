@@ -386,11 +386,11 @@ static PyMethodDef ChameleonMethods[] = {
 };
 
 PyMODINIT_FUNC
-initchameleon(void)
+initlibchameleon(void)
 {
   PyObject *m;
 
-  m = Py_InitModule("chameleon", ChameleonMethods);
+  m = Py_InitModule("libchameleon", ChameleonMethods);
   if (m == NULL)
     return;
 

@@ -486,6 +486,8 @@ class CameraModule(mp_module.MPModule):
 
                 if h is None:
                     h, base_time, last_frame_time = self.get_base_time()
+		    if h is None:
+			print "camera::capture_thread Rats... h is None!"
                     last_capture_frame_time = last_frame_time
                     # put into continuous mode
                     sensor.trigger(h, True)
@@ -520,7 +522,7 @@ class CameraModule(mp_module.MPModule):
                 frame_time, frame_counter, shutter, bgr = sensor.capture(h, 1000)
 		self.camera_settings.height = bgr.shape[0]
 		self.camera_settings.width = bgr.shape[1]
-		self.camera_settings.depth = bgr.shape[2]
+		#self.camera_settings.depth = bgr.shape[2]
 
                 if frame_time < last_capture_frame_time:
                     base_time += 128

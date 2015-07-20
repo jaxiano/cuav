@@ -13,14 +13,14 @@ from cuav.image import scanner
 
 error = chameleon.error
 continuous_mode = False
-fake = 'cuav/tests/test-8bit.pgm'
+fake = 'cuav/tests/test-flea.pgm'
 frame_counter = 0
 trigger_time = 0
 frame_rate = 7.5
 chameleon_gamma = 950
 last_frame_time = 0
-image_height = 960
-image_width = 1280
+image_height = 2048 
+image_width = 2448 
 
 def open(colour, depth, brightness, height, width):
     image_height = height
@@ -36,13 +36,16 @@ def trigger(h, continuous):
 def load_image(filename):
     print "Loading mock file: %s" % filename
     if filename.endswith('.pgm'):
-        fake_img = cuav_util.PGM(filename)
-        return fake_img.array
+        pgm = cuav_util.PGM(filename)
+	#bgr = numpy.zeros((image_height, image_width, 3), dtype='uint8')
+	#scanner.debayer(pgm.array, bgr)
+        #return cv.GetImage(cv.fromarray(bgr))
+	return pgm 
     img = cv.LoadImage(filename)
-    array = numpy.asarray(cv.GetMat(img))
+    array = numpy.ascontiguousarray(cv.GetMat(img))
     grey = numpy.zeros((image_height, image_width), dtype='uint8')
     scanner.rebayer(array, grey)
-    return grey
+    return array
     
 
 def capture(h, timeout):
@@ -56,9 +59,9 @@ def capture(h, timeout):
     filename = os.path.realpath(fake)
 
     try:
-        fake_img = load_image(filename)
+        pgm = load_image(filename)
 	print 'flea::capture converting raw to bgr'
-	bgr = convertRawToBGR(fake_img)
+	bgr = convertRawToBGR(pgm)
     except Exception, msg:
         raise chameleon.error('missing %s' % fake)
     frame_counter += 1
@@ -66,11 +69,12 @@ def capture(h, timeout):
     print 'flea::capture returning data'
     return trigger_time, frame_counter, 0, bgr
 
-def convertRawToBGR(img):
+def convertRawToBGR(pgm):
     global image_width, image_height
-    bgr = numpy.zeros((image_height,image_width,3),dtype='uint8')
+    raw = pgm.array
+    bgr = numpy.zeros((pgm.img.height,pgm.img.width,3),dtype='uint8')
     print 'flea::convertRawToBGR debayer'
-    scanner.debayer(img, bgr)
+    scanner.debayer(raw, bgr)
     return bgr
 
 def close(h):
@@ -91,8 +95,9 @@ def set_framerate(h, framerate):
     else:
         frame_rate = 1.875;
 
-def save_pgm(filename, img):
-    return chameleon.save_pgm(filename, img)
+def save_pgm(filename, bgr):
+    mat = cv.GetMat(cv.fromarray(bgr))
+    return cv.SaveImage(filename, mat)
 
 def save_file(filename, bytes):
     return chameleon.save_file(filename, bytes)

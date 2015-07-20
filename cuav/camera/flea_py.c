@@ -504,11 +504,11 @@ static PyMethodDef FleaMethods[] = {
 };
 
 PyMODINIT_FUNC
-initflea(void)
+initlibflea(void)
 {
   PyObject *m;
 
-  m = Py_InitModule("flea", FleaMethods);
+  m = Py_InitModule("libflea", FleaMethods);
   if (m == NULL)
     return;
 

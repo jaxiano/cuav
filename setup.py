@@ -28,7 +28,7 @@ ext_modules.append(scanner)
 
 
 def init_chameleon():
-    	chameleon = Extension('cuav.camera.chameleon',
+    	chameleon = Extension('cuav.camera.libchameleon',
                           sources = ['cuav/camera/chameleon_py.c',
                                      'cuav/camera/chameleon.c',
                                      'cuav/camera/chameleon_util.c'],
@@ -37,7 +37,7 @@ def init_chameleon():
     	ext_modules.append(chameleon)
 
 def init_flea():
-   	flea = Extension('cuav.camera.flea',
+   	flea = Extension('cuav.camera.libflea',
                           sources = ['cuav/camera/flea_py.c',
                                      'cuav/camera/flea_lib.c'],
                           libraries = ['flycapture-c'])
@@ -124,7 +124,8 @@ setup (name = 'cuav',
                    'cuav/tools/pgm_convert.py',
                    'cuav/tests/cuav_benchmark.py' ],
         package_data = { 'cuav' : [ 'tests/test-8bit.pgm',
-				    'tests/test-tau.pnm',
+				    'tests/test-flea.pgm',
+				    'tests/test-tau.png',
                                    'data/chameleon1_arecont0.json',
 				   'data/flea.json',
                                    'camera/include/*.h']},
