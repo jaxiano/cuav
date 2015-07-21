@@ -251,7 +251,7 @@ class MavInterpolator():
 
 			return MavPosition(lat, lon, altitude, roll, pitch, yaw, t)
 		except Exception as exception:
-			return MavPosiiton(0.0, 0.0, 0, 0, 0, 0,t)
+			return MavPosition(0.0, 0.0, 0, 0, 0, 0,t)
 	
 	def set_logfile(self, filename):
 		'''provide a mavlink logfile for data'''
