@@ -15,11 +15,11 @@ camera set minscore 500
 camera set minscore2 1200
 camera set bandwidth 130000
 camera set blue_emphasis 1
-camera set height 480
-camera set width 640
-#camera set height 960
-#camera set width 1280
-camera set camparms cuav/data/flea.json
+#camera set height 480
+#camera set width 640
+camera set height 960
+camera set width 1280
+#camera set camparms cuav/data/flea.json
 camera set debug true
 camera set clock_sync false
 camera set save_pgm 1

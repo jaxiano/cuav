@@ -9,6 +9,7 @@ from . import chameleon
 from . import sightline
 import time, os, sys, cv, numpy, glob
 
+from cuav.camera.cam_params import CameraParams
 from cuav.lib import cuav_util
 from cuav.image import scanner
 
@@ -18,6 +19,8 @@ except ImportError:
 	import cv
 
 error = chameleon.error
+config_file = 'cuav/data/tau.json'
+
 continuous_mode = False
 raw_png = 'images/raw'
 raw_png_base_path = '/dev/Downloads/ftp/'
@@ -30,9 +33,23 @@ last_frame_time = 0
 image_height = 480
 image_width = 640
 
+def load_camera_settings():
+	global image_height, image_width
+
+        c_params = CameraParams(lens=4.0, xresolution=0, yresolution=0)
+        if os.path.exists(config_file):
+            c_params.load(config_file)
+	    image_height = c_params.yresolution
+	    image_width = c_params.xresolution
+            print("Loaded %s" % config_file)
+        else:
+            print("Warning: %s not found. Using default resolution height=%i and width=%i" % (config_file,image_height,image_width))
+
+def get_resolution():
+	return image_height, image_width
+
 def open(colour, depth, brightness, height, width):
-    print "tau::open color:%i,depth:%i,brightness:%i,height:%i,width:%i" % (colour,depth,brightness,height,width)
-   
+    print 'Requested (%ix%i). Using (%i,%i)' % (width,height,image_width,image_height)
     return 0
 
 def trigger(h, continuous):
@@ -155,3 +172,5 @@ def get_brightness(h):
 
 def get_auto_setting(h, settings):
     return [0,0,0]
+
+load_camera_settings()

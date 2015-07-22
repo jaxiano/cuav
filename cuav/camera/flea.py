@@ -8,19 +8,41 @@ The API is the same as the chameleon module, but takes images from fake_chameleo
 from . import chameleon
 import time, os, sys, cv, numpy
 
+from cuav.camera.cam_params import CameraParams
 from cuav.lib import cuav_util
 from cuav.image import scanner
 from cuav.camera import libflea as flea
 
 error = chameleon.error
+config_file = 'cuav/data/flea.json'
+
+image_height = 2048
+image_width = 2448
 continuous_mode = False
-image_height = 2048 
-image_width = 2448 
+
+def load_camera_settings():
+	global image_height, image_width
+
+        c_params = CameraParams(lens=4.0, xresolution=0, yresolution=0)
+        if os.path.exists(config_file):
+            c_params.load(config_file)
+	    image_height = c_params.yresolution
+	    image_width = c_params.xresolution
+            print("Loaded %s" % config_file)
+        else:
+            print("Warning: %s not found. Using default resolution height=%i and width=%i" % (config_file,image_height,image_width))
+
+def get_resolution():
+	return image_height, image_width
 
 def open(colour, depth, brightness, height, width):
 	global image_width, image_height
 	
-	print 'flea::open'
+	if height > 0 and width > 0:
+		image_height = height
+		image_width = width
+	
+	print 'Requested (%ix%i). Using (%i,%i)' % (width,height,image_width,image_height)
 	return flea.open(colour, depth, brightness, image_height, image_width)
 
 def close(h):
@@ -92,3 +114,4 @@ def save_pgm(filename, bgr):
 def save_file(filename, bytes):
 	flea.save_file(filename, bytes)
 
+load_camera_settings()

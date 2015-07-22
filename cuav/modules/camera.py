@@ -180,6 +180,7 @@ class CameraModule(mp_module.MPModule):
         for mtype in ['DATA16', 'DATA32', 'DATA64', 'DATA96']:
             self.module('link').no_fwd_types.add(mtype)
 
+	print 'Loading Default MPSettings'
         from MAVProxy.modules.lib.mp_settings import MPSettings, MPSetting
         self.camera_settings = MPSettings(
             [ MPSetting('depth', int, 8, 'Image Depth'),
@@ -209,8 +210,8 @@ class CameraModule(mp_module.MPModule):
               
               MPSetting('bandwidth',  int, 40000, 'Link1 Bandwdith', 'Comms'),
               MPSetting('bandwidth2', int, 2000, 'Link2 Bandwidth'),
-              MPSetting('height', int, 2048, 'Height of Image.  X resolution'),
-              MPSetting('width', int, 2448, 'Width of Image. Y resolution'),
+              MPSetting('height', int, -1, 'Height of Image.  X resolution'),
+              MPSetting('width', int, -1, 'Width of Image. Y resolution'),
               MPSetting('quality', int, 75, 'Compression Quality', range=(1,100), increment=1),
               MPSetting('transmit', bool, True, 'Transmit Enable'),
               MPSetting('send1', bool, True, 'Send on Link1'),
@@ -262,8 +263,9 @@ class CameraModule(mp_module.MPModule):
         self.transmit_queue = Queue.Queue()
         self.viewing = False
         self.have_set_gps_time = False
-	##TODO get rid of separate height and width and depend on camera params        
-        self.c_params = CameraParams(lens=4.0, xresolution=self.camera_settings.width, yresolution=self.camera_settings.height)
+
+        #self.c_params = CameraParams(lens=4.0, xresolution=self.camera_settings.width, yresolution=self.camera_settings.height)
+
         self.jpeg_size = 0
         self.xmit_queue = 0
         self.xmit_queue2 = 0
@@ -311,9 +313,6 @@ class CameraModule(mp_module.MPModule):
         self.add_completion_function('(CAMERASETTING)', self.settings.completion)
         self.add_command('remote', self.cmd_remote, "remote command", ['(COMMAND)'])
         self.add_completion_function('(CAMERASETTING)', self.camera_settings.completion)
-
-        self.restore_parms('image.parm', self.image_settings)
-        self.restore_parms('camera.parm', self.camera_settings)
         print("camera initialised")
 
     def cmd_camera(self, args):
@@ -386,12 +385,16 @@ class CameraModule(mp_module.MPModule):
                     self.mpstate.map.add_object(mp_slipmap.SlipPolygon('boundary', self.boundary_polygon,
                                                                        layer=1, linewidth=2, colour=(0,0,255)))
         elif args[0] == "airstart":
+            self.restore_parms('image.parm', self.image_settings)
+            self.restore_parms('camera.parm', self.camera_settings)
+
             self.start_aircraft_bsend()
             if self.airstart_thread_h is None:
                 self.airstart_thread_h = self.start_thread(self.airstart_thread)
 	
             ##Getting initial camera settings for clients	
             h = sensor.open(1, self.camera_settings.depth, self.camera_settings.capture_brightness, self.camera_settings.height, self.camera_settings.width)
+	    self.camera_settings.height, self.camera_settings.width = sensor.get_resolution()
 	    self.auto_settings = self.get_auto_settings(h)
             time.sleep(0.1)
             sensor.close(h)
@@ -416,6 +419,7 @@ class CameraModule(mp_module.MPModule):
         print('Opening camera')
         time.sleep(0.5)
         h = sensor.open(1, self.camera_settings.depth, self.camera_settings.capture_brightness, self.camera_settings.height, self.camera_settings.width)
+	self.camera_settings.height, self.camera_settings.width = sensor.get_resolution()
 
         print('Getting camera base_time')
         while frame_time is None:
@@ -434,6 +438,7 @@ class CameraModule(mp_module.MPModule):
                 sensor.close(h)
                 time.sleep(0.5)
                 h = sensor.open(1, self.camera_settings.depth, self.camera_settings.capture_brightness, self.camera_settings.height, self.camera_settings.width)
+	        self.camera_settings.height, self.camera_settings.width = sensor.get_resolution()
 	self.auto_settings = self.get_auto_settings(h)
         print('base_time=%f' % base_time)
         return h, base_time, frame_time
@@ -443,11 +448,11 @@ class CameraModule(mp_module.MPModule):
         if self.camera_settings.camparms is None or self.last_camparms == self.camera_settings.camparms:
             return
         self.last_camparms = self.camera_settings.camparms
-        if os.path.exists(self.camera_settings.camparms):
-            self.c_params.load(self.camera_settings.camparms)
-            print("Loaded %s" % self.camera_settings.camparms)
-        else:
-            print("Warning: %s not found" % self.camera_settings.camparms)
+        #if os.path.exists(self.camera_settings.camparms):
+        #    self.c_params.load(self.camera_settings.camparms)
+        #    print("Loaded %s" % self.camera_settings.camparms)
+        #else:
+        #    print("Warning: %s not found" % self.camera_settings.camparms)
 
     def capture_thread(self):
         '''camera capture thread'''
