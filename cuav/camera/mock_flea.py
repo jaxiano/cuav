@@ -5,14 +5,13 @@ emulate a chameleon camera, getting images from a playback tool
 The API is the same as the chameleon module, but takes images from fake_chameleon.pgm
 '''
 
-from . import chameleon
 import time, os, sys, cv, numpy
 
 from cuav.camera.cam_params import CameraParams
 from cuav.lib import cuav_util
 from cuav.image import scanner
 
-error = chameleon.error
+error = scanner.error
 config_file = 'cuav/data/flea.json'
 
 continuous_mode = False
@@ -20,7 +19,6 @@ fake = 'cuav/tests/test-flea.pgm'
 frame_counter = 0
 trigger_time = 0
 frame_rate = 7.5
-chameleon_gamma = 950
 last_frame_time = 0
 image_height = 2048 
 image_width = 2448
@@ -80,7 +78,7 @@ def capture(h, timeout):
 	print 'mock_flea::capture converting raw to bgr'
 	bgr = convertRawToBGR(pgm)
     except Exception, msg:
-        raise chameleon.error('missing %s' % fake)
+        raise scanner.error('missing %s' % fake)
     frame_counter += 1
     trigger_time = time.time()
     print 'mock_flea::capture returning data'
@@ -98,8 +96,7 @@ def close(h):
     return
 
 def set_gamma(h, gamma):
-    global chameleon_gamma
-    chameleon_gamma = gamma
+    pass
 
 def set_framerate(h, framerate):
     global frame_rate
@@ -117,7 +114,7 @@ def save_pgm(filename, bgr):
     return cv.SaveImage(filename, mat)
 
 def save_file(filename, bytes):
-    return chameleon.save_file(filename, bytes)
+    return scanner.save_file(filename, bytes)
 
 def set_brightness(h):
     pass

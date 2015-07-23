@@ -1922,6 +1922,51 @@ scanner_png_raw_to_bgr(PyObject *self, PyObject *args)
 	Py_RETURN_NONE;	
 }
 
+/* low level file save routine */
+static int _save_file(const char *filename, unsigned size, const char *data)
+{
+	int fd = open(filename, O_WRONLY|O_CREAT|O_TRUNC, 0644);
+	if (fd == -1) {
+		return -1;
+	}
+	if (write(fd, data, size) != size) {
+		close(fd);
+		return -1;
+	}
+	close(fd);
+	return 0;
+}
+
+/*
+  save a file from a python string
+ */
+static PyObject *
+save_file(PyObject *self, PyObject *args)
+{
+	int status;
+	const char *filename;
+	PyByteArrayObject *obj;
+	char *data;
+	unsigned size;
+
+	if (!PyArg_ParseTuple(args, "sO", &filename, &obj))
+		return NULL;
+	if (!PyString_Check(obj))
+		return NULL;
+
+	data = PyString_AS_STRING(obj);
+	size = PyString_GET_SIZE(obj);
+
+	Py_BEGIN_ALLOW_THREADS;
+	status = _save_file(filename, size, data);
+	Py_END_ALLOW_THREADS;
+	if (status != 0) {
+		PyErr_SetString(ScannerError, "file save failed");
+		return NULL;
+	}
+	Py_RETURN_NONE;
+}
+
 static PyMethodDef ScannerMethods[] = {
 	{"debayer_half", scanner_debayer_half, METH_VARARGS, "simple debayer of image to half size 24 bit"},
 	{"debayer", scanner_debayer, METH_VARARGS, "debayer of image to full size 24 bit image"},
@@ -1938,6 +1983,7 @@ static PyMethodDef ScannerMethods[] = {
 	{"scan_python", scanner_scan_python, METH_VARARGS, "histogram scan a color image"},
 	{"save_pnm_grey", scanner_save_pnm_grey, METH_VARARGS, "Save image as greyscale"},
 	{"png_raw_to_bgr", scanner_png_raw_to_bgr, METH_VARARGS, "Convert Sightline Raw 16-bit PNG to 24-bit BGR"},
+	{"save_file", save_file, METH_VARARGS, "save to a file from a pystring"},
 	{NULL, NULL, 0, NULL}
 };
 

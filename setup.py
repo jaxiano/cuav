@@ -8,7 +8,6 @@ import json
 version = '1.3.4'
 
 ext_modules = []
-chameleon = None
 flea = None
 tau = None
 sensor = None
@@ -29,15 +28,6 @@ scanner = Extension('cuav.image.scanner',
 ext_modules.append(scanner)
 
 
-def init_chameleon():
-    	chameleon = Extension('cuav.camera.libchameleon',
-                          sources = ['cuav/camera/chameleon_py.c',
-                                     'cuav/camera/chameleon.c',
-                                     'cuav/camera/chameleon_util.c'],
-                          libraries = ['dc1394', 'm', 'usb-1.0'],
-                          extra_compile_args=extra_compile_args + ['-O0'])
-    	ext_modules.append(chameleon)
-
 def init_flea():
    	flea = Extension('cuav.camera.libflea',
                           sources = ['cuav/camera/flea_py.c',
@@ -56,7 +46,6 @@ def build_config(camera_type):
     global sensor
 
     dst = "cuav/modules/settings.py"
-    init_chameleon()
     sensor = camera_type
 
     print '====== camera_type: %s' % sensor 
@@ -77,15 +66,6 @@ class BuildPyCommand(setuptools.command.build_py.build_py):
 	if sensor is None:
 		self.run_command('flea')
 	setuptools.command.build_py.build_py.run(self)
-
-class Chameleon(Command):
-   user_options=[]
-   def initialize_options(self):
-	pass
-   def finalize_options(self):
-	pass
-   def run(self):
-	build_config("chameleon")
 
 class Flea(Command):
    user_options=[]
@@ -145,7 +125,6 @@ setup (name = 'cuav',
 		'flea':Flea
 		,'tau':Tau
 		,'build_py':BuildPyCommand
-		#,'chameleon':Chameleon
 	}
 )
 

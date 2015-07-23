@@ -5,14 +5,13 @@ emulate a chameleon camera, getting images from a playback tool
 The API is the same as the chameleon module, but takes images from fake_chameleon.pgm
 '''
 
-from . import chameleon
 import time, os, sys, cv, numpy
 
 from cuav.camera.cam_params import CameraParams
 from cuav.lib import cuav_util
 from cuav.image import scanner
 
-error = chameleon.error
+error = scanner.error
 config_file = 'cuav/data/tau.json'
 
 continuous_mode = False
@@ -20,7 +19,6 @@ fake = 'cuav/tests/test-tau.png'
 frame_counter = 0
 trigger_time = 0
 frame_rate = 7.5
-chameleon_gamma = 950
 last_frame_time = 0
 image_height = 480
 image_width = 640
@@ -74,7 +72,7 @@ def capture(h, timeout):
 	print 'tau::capture calling convert_png_raw_to_bgr'
 	scanner.png_raw_to_bgr(bgr, filename)
     except Exception, msg:
-        raise chameleon.error('missing %s' % fake)
+        raise scanner.error('missing %s' % fake)
     print"tau::capture img shape height:%i,width%i" % (bgr.shape[0],bgr.shape[1])
     frame_counter += 1
     trigger_time = time.time()
@@ -86,8 +84,7 @@ def close(h):
     return
 
 def set_gamma(h, gamma):
-    global chameleon_gamma
-    chameleon_gamma = gamma
+    pass
 
 def set_framerate(h, framerate):
     global frame_rate
@@ -105,7 +102,7 @@ def save_pgm(filename, bgr):
     return cv.SaveImage(filename, mat)
 
 def save_file(filename, bytes):
-    return chameleon.save_file(filename, bytes)
+    return scanner.save_file(filename, bytes)
 
 def set_brightness(h):
     pass

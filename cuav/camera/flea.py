@@ -5,7 +5,6 @@ emulate a chameleon camera, getting images from a playback tool
 The API is the same as the chameleon module, but takes images from fake_chameleon.pgm
 '''
 
-from . import chameleon
 import time, os, sys, cv, numpy
 
 from cuav.camera.cam_params import CameraParams
@@ -13,7 +12,7 @@ from cuav.lib import cuav_util
 from cuav.image import scanner
 from cuav.camera import libflea as flea
 
-error = chameleon.error
+error = scanner.error
 config_file = 'cuav/data/flea.json'
 
 image_height = 2048
