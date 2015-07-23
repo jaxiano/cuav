@@ -107,7 +107,7 @@ class Snapshot(BaseCommand):
         buf.append(0) # 0=ftp server; 1=sd card
         buf.append(1) # 0=jpg; 1=png
         buf.append(1) # 1=captured image; 2=display image
-        buf.append(80) # Compression quality level 1 - 100;  png is a lossless compression
+        buf.append(100) # Compression quality level 1 - 100;  png is a lossless compression
         buf.append(1) # downsample 1=full resolution; 2=2x2 downsample; 4=4x4 downsample
 
         ip_parts = self.host.split('.')
@@ -141,11 +141,10 @@ if __name__ == '__main__':
     buf = BaseCommand().get_version()
     con.send(buf)
 
-    ss = Snapshot('10.1.80.56', 'anonymous', 'odroid')
+    ss = Snapshot('10.0.107.90', 'anonymous', 'odroid')
     con.send(ss.set_parameters())
 
-    con.send(ss.do_snapshot('pythontest'))
-    while True:
-        time.sleep(1)
+    con.send(ss.do_snapshot('images/pythontest'))
+    time.sleep(5)
 
     pass
