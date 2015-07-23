@@ -1,5 +1,6 @@
 from distutils.core import Command
 from setuptools import setup, Extension
+import setuptools.command.build_py
 import numpy as np
 import os, sys, platform, shutil
 import json
@@ -10,6 +11,7 @@ ext_modules = []
 chameleon = None
 flea = None
 tau = None
+sensor = None
 
 if platform.system() == 'Windows':
     extra_compile_args=["-std=gnu99", "-O3"]
@@ -51,19 +53,30 @@ def init_tau():
 	ext_modules.append(tau)
 
 def build_config(camera_type):
-    dst = "cuav/modules/settings.py"
+    global sensor
 
-    if camera_type == "flea":
-        init_flea()
-        src = "cuav/settings/settings_flea.py"
-    elif camera_type == "tau":
+    dst = "cuav/modules/settings.py"
+    init_chameleon()
+    sensor = camera_type
+
+    print '====== camera_type: %s' % sensor 
+
+    if camera_type == "tau":
 	init_tau()
 	src = "cuav/settings/settings_tau.py"
     else:
-        init_chameleon()
-        src = "cuav/settings/settings_chameleon.py"
+        init_flea()
+        src = "cuav/settings/settings_flea.py"
 
     shutil.copyfile(src, dst)
+
+class BuildPyCommand(setuptools.command.build_py.build_py):
+    def run(self):
+	global sensor
+
+	if sensor is None:
+		self.run_command('flea')
+	setuptools.command.build_py.build_py.run(self)
 
 class Chameleon(Command):
    user_options=[]
@@ -91,8 +104,6 @@ class Tau(Command):
 	pass
    def run(self):
 	build_config("tau")
-
-build_config("chameleon")
 
 setup (name = 'cuav',
         zip_safe=True,
@@ -133,6 +144,7 @@ setup (name = 'cuav',
 	cmdclass={
 		'flea':Flea
 		,'tau':Tau
+		,'build_py':BuildPyCommand
 		#,'chameleon':Chameleon
 	}
 )
