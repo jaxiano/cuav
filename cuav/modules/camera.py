@@ -244,7 +244,7 @@ class CameraModule(mp_module.MPModule):
               MPSetting('MaxRegionSize', float, 3.0, range=(0,100), increment=0.1, digits=1),
               MPSetting('MaxRarityPct',  float, 0.02, range=(0,100), increment=0.01, digits=2),
               MPSetting('RegionMergeSize', float, 1.0, range=(0,100), increment=0.1, digits=1),
-              MPSetting('SaveIntermediate', bool, False),
+              MPSetting('SaveIntermediate', bool, 0),
 	      MPSetting('Severity', int, 1)
               ],
             title='Image Settings')
@@ -560,9 +560,9 @@ class CameraModule(mp_module.MPModule):
                 self.save_queue.put((img_time, bgr))
                 self.scan_queue.put((img_time, bgr))
                 self.capture_count += 1
-                self.fps = 1.0/(frame_time - last_frame_time)
 
                 if frame_time != last_frame_time:
+                    self.fps = 1.0/(frame_time - last_frame_time)
                     self.framerate = 1.0 / (frame_time - last_frame_time)
                 last_frame_time = frame_time
                 last_frame_counter = frame_counter
@@ -609,7 +609,7 @@ class CameraModule(mp_module.MPModule):
             scan_parms = {}
             for name in self.image_settings.list():
                 scan_parms[name] = self.image_settings.get(name)
-            scan_parms['SaveIntermediate'] = float(scan_parms['SaveIntermediate'])
+            scan_parms['SaveIntermediate'] = float(self.image_settings.SaveIntermediate)
             scan_parms['BlueEmphasis'] = float(self.camera_settings.blue_emphasis)
 
             if self.terrain_alt is not None:
@@ -633,7 +633,7 @@ class CameraModule(mp_module.MPModule):
 	    #scanner.png_raw_to_bgr(im_full, filename)
 	    #im_full = bgr
 
-            regions = scanner.scan_python(bgr,'ignore', scan_parms)
+            regions = scanner.scan_python(bgr,'script/gtest/', scan_parms)
             if self.camera_settings.filter_type=='compactness':
                 calculate_compactness = True
             else:

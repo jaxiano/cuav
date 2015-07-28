@@ -4,6 +4,9 @@
 #include "C/FlyCapture2_C.h"
 #include "include/flea_lib.h"
 
+#define MAX_HEIGHT 2048
+#define MAX_WIDTH 2448
+
 void SetTimeStamping( fc2Context context, BOOL enableTimeStamp )
 {
     fc2Error error;
@@ -122,8 +125,8 @@ fleaCamera* open_camera(int brightness, unsigned int height, unsigned int width)
        
         image_settings.width = width;
         image_settings.height = height;
-        image_settings.offsetX = 0;
-        image_settings.offsetY = 0;
+        image_settings.offsetX = (int)(MAX_WIDTH - width)/2;
+        image_settings.offsetY = (int)(MAX_HEIGHT - height)/2;
         image_settings.pixelFormat = FC2_PIXEL_FORMAT_RAW8;
     
         error = fc2SetGigEImageSettings(camera->context, &image_settings);

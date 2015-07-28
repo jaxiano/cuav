@@ -38,8 +38,8 @@ def open(colour, depth, brightness, height, width):
 	global image_width, image_height
 	
 	if height > 0 and width > 0:
-		image_height = height
-		image_width = width
+		image_height = min(image_height, height)
+		image_width = min(image_width, width)
 	
 	print 'Requested (%ix%i). Using (%i,%i)' % (width,height,image_width,image_height)
 	return flea.open(colour, depth, brightness, image_height, image_width)
@@ -59,7 +59,7 @@ def capture(h, timeout):
 	global continuous_mode, image_height, image_width
 	img = numpy.zeros((image_height, image_width), dtype='uint8')
 	frame_time, frame_counter, shutter = flea.capture(h, timeout, img)
-	bgr = None
+	bgr = None 
 	if continuous_mode:
 		print 'flea::capture In continuous mode...'
 		bgr = convertRawToBGR(img)
