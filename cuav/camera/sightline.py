@@ -135,7 +135,7 @@ def print_output(data):
     print "data received: ".format(data)
 
 if __name__ == '__main__':
-    con = Connector('10.0.107.77', print_output)
+    con = Connector('10.0.107.56', print_output)
     con.start()
 
     buf = BaseCommand().get_version()

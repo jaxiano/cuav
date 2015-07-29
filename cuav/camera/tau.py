@@ -20,7 +20,6 @@ except ImportError:
 error = scanner.error
 config_file = 'cuav/data/tau.json'
 
-continuous_mode = False
 raw_png = 'images/raw'
 raw_png_base_path = '/dev/Downloads/ftp/'
 raw_png_search_path = raw_png_base_path + raw_png + '*'
@@ -30,6 +29,9 @@ frame_rate = 7.5
 last_frame_time = 0
 image_height = 480
 image_width = 640
+continuous_mode = False
+tau_ip = '10.0.107.56'
+odroid_ip = '10.0.107.90'
 
 def load_camera_settings():
 	global image_height, image_width
@@ -63,16 +65,16 @@ def load_image(filename):
 
 def request_image():
     print 'Initializing Sightline Connector' 
-    con = sightline.Connector('10.0.107.77', sightline.print_output)
+    con = sightline.Connector(tau_ip, sightline.print_output)
     con.start()
 
     buf = sightline.BaseCommand().get_version()
     con.send(buf)
-    ss = sightline.Snapshot('10.1.80.56', 'anonymous', 'odroid')
+    ss = sightline.Snapshot(odroid_ip, 'anonymous', 'odroid')
     con.send(ss.set_parameters())
     con.send(ss.do_snapshot(raw_png))
 
-def capture(h, timeout):
+def capture(h, timeout, bgr):
     print "tau::capture"
     global continuous_mode, trigger_time, frame_rate, frame_counter, fake, last_frame_time, image_height, image_width,  raw_png 
     print "tau::capture Calculate time of capture"
@@ -83,7 +85,6 @@ def capture(h, timeout):
         timeout -= int(due*1000)
 
     # wait for a new image to appear
-    bgr = None
     if continuous_mode:
     	try:
 		counter = 0
@@ -111,7 +112,6 @@ def capture(h, timeout):
 				request_image()
 		
 		print "tau::capture Allocating memory for bgr height:%i, width:%i, filename:%s" % (image_height, image_width, raw_png_path)
-		bgr = numpy.zeros((image_height,image_width,3),dtype='uint8')
     		print"tau::capture img shape height:%i,width%i" % (bgr.shape[0],bgr.shape[1])
 		print 'tau::capture calling convert_png_raw_to_bgr'
 		scanner.png_raw_to_bgr(bgr, raw_png_path)

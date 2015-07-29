@@ -5,7 +5,7 @@ emulate a chameleon camera, getting images from a playback tool
 The API is the same as the chameleon module, but takes images from fake_chameleon.pgm
 '''
 
-import time, os, sys, cv, numpy
+import time, os, sys, cv, numpy, shutil
 
 from cuav.camera.cam_params import CameraParams
 from cuav.lib import cuav_util
@@ -14,7 +14,6 @@ from cuav.image import scanner
 error = scanner.error
 config_file = 'cuav/data/flea.json'
 
-continuous_mode = False
 fake = 'cuav/tests/test-flea.pgm'
 frame_counter = 0
 trigger_time = 0
@@ -22,6 +21,7 @@ frame_rate = 7.5
 last_frame_time = 0
 image_height = 2048 
 image_width = 2448
+continuous_mode = False
 
 def load_camera_settings():
 	global image_height, image_width
@@ -63,7 +63,7 @@ def load_image(filename):
     return array
     
 
-def capture(h, timeout):
+def capture(h, timeout, bgr):
     global continuous_mode, trigger_time, frame_rate, frame_counter, fake, last_frame_time
     tnow = time.time()
     due = trigger_time + (1.0/frame_rate)
@@ -72,25 +72,24 @@ def capture(h, timeout):
         timeout -= int(due*1000)
     # wait for a new image to appear
     filename = os.path.realpath(fake)
+    pgm = load_image(filename)
 
-    try:
-        pgm = load_image(filename)
-	print 'mock_flea::capture converting raw to bgr'
-	bgr = convertRawToBGR(pgm)
-    except Exception, msg:
-        raise scanner.error('missing %s' % fake)
+    if continuous_mode:
+    	try:
+		print 'mock_flea::capture converting raw to bgr'
+		convertRawToBGR(pgm, bgr)
+    	except Exception, msg:
+        	raise scanner.error('missing %s' % fake)
     frame_counter += 1
     trigger_time = time.time()
     print 'mock_flea::capture returning data'
-    return trigger_time, frame_counter, 0, bgr
+    return trigger_time, frame_counter, 0, pgm
 
-def convertRawToBGR(pgm):
+def convertRawToBGR(pgm, bgr):
     global image_width, image_height
     raw = pgm.array
-    bgr = numpy.zeros((pgm.img.height,pgm.img.width,3),dtype='uint8')
     print 'mock_flea::convertRawToBGR debayer'
     scanner.debayer(raw, bgr)
-    return bgr
 
 def close(h):
     return
@@ -109,9 +108,10 @@ def set_framerate(h, framerate):
     else:
         frame_rate = 1.875;
 
-def save_pgm(filename, bgr):
-    mat = cv.GetMat(cv.fromarray(bgr))
-    return cv.SaveImage(filename, mat)
+def save_pgm(filename, raw):
+    #mat = cv.GetMat(cv.fromarray(raw))
+    #return cv.SaveImage(filename, mat)
+    shutil.copyfile(fake, filename)
 
 def save_file(filename, bytes):
     return scanner.save_file(filename, bytes)
