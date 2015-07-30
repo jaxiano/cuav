@@ -74,7 +74,7 @@ def request_image():
     con.send(ss.set_parameters())
     con.send(ss.do_snapshot(raw_png))
 
-def capture(h, timeout, bgr):
+def capture(h, timeout):
     print "tau::capture"
     global continuous_mode, trigger_time, frame_rate, frame_counter, fake, last_frame_time, image_height, image_width,  raw_png 
     print "tau::capture Calculate time of capture"
@@ -85,6 +85,7 @@ def capture(h, timeout, bgr):
         timeout -= int(due*1000)
 
     # wait for a new image to appear
+    bgr = None
     if continuous_mode:
     	try:
 		counter = 0
@@ -97,7 +98,8 @@ def capture(h, timeout, bgr):
 			for file in sorted(files):
 				filesize = os.path.getsize(file)
 				print 'file: %s, filesize: %i' % (file, filesize)
-				if filesize > 200000L:
+				# uncompressed PNG
+				if filesize == 616112L:
 					raw_png_path = file
 					available = True
 					break
@@ -112,6 +114,7 @@ def capture(h, timeout, bgr):
 				request_image()
 		
 		print "tau::capture Allocating memory for bgr height:%i, width:%i, filename:%s" % (image_height, image_width, raw_png_path)
+    		bgr = numpy.zeros((image_height, image_width, 3), dtype='uint8')
     		print"tau::capture img shape height:%i,width%i" % (bgr.shape[0],bgr.shape[1])
 		print 'tau::capture calling convert_png_raw_to_bgr'
 		scanner.png_raw_to_bgr(bgr, raw_png_path)

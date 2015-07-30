@@ -427,8 +427,7 @@ class CameraModule(mp_module.MPModule):
                 #im = numpy.zeros((self.camera_settings.height,self.camera_settings.width),dtype='uint8' if self.camera_settings.depth==8 else 'uint16')
                 base_time = time.time()
                 sensor.trigger(h, False)
-		bgr = None
-                frame_time, frame_counter, shutter, nothing = sensor.capture(h, 1000, bgr)
+                frame_time, frame_counter, shutter, nothing = sensor.capture(h, 1000)
                 base_time -= frame_time
             except sensor.error, msg:
                 print('failed to capture: {0}'.format(msg))
@@ -525,9 +524,7 @@ class CameraModule(mp_module.MPModule):
                 capture_time = time.time()
                 
                 # capture an image
-		image_height, image_width = sensor.get_resolution()
-		bgr = numpy.zeros((image_height, image_width, 3), dtype='uint8')
-                frame_time, frame_counter, shutter, raw = sensor.capture(h, 1000, bgr)
+                frame_time, frame_counter, shutter, bgr = sensor.capture(h, 1000)
 		self.camera_settings.height = bgr.shape[0]
 		self.camera_settings.width = bgr.shape[1]
 		#self.camera_settings.depth = bgr.shape[2]
@@ -560,7 +557,7 @@ class CameraModule(mp_module.MPModule):
                                                         self.camera_settings.gamma))
                 gammalog.flush()
 
-                self.save_queue.put((img_time, raw))
+                self.save_queue.put((img_time, bgr))
                 self.scan_queue.put((img_time, bgr))
                 self.capture_count += 1
 
@@ -595,7 +592,7 @@ class CameraModule(mp_module.MPModule):
             frame_count += 1
             if self.camera_settings.save_pgm != 0: # and self.flying:
                 if frame_count % self.camera_settings.save_pgm == 0:
-                    sensor.save_pgm('%s/%s.pgm' % (raw_dir, rawname), raw)
+                    sensor.save_pgm('%s/%s.png' % (raw_dir, rawname), raw)
 		    self.last_image_saved = rawname
 
     def scan_thread(self):
@@ -1361,7 +1358,7 @@ class CameraModule(mp_module.MPModule):
 	    obj.frame_time = cuav_util.parse_frame_time(rawname)
 	
         raw_dir = os.path.join(self.camera_dir, "raw")
-        filename = '%s/%s.pgm' % (raw_dir, rawname)
+        filename = '%s/%s.png' % (raw_dir, rawname)
         if not os.path.exists(filename):
             print("No file: %s" % filename)
             return

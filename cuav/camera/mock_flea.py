@@ -63,7 +63,7 @@ def load_image(filename):
     return array
     
 
-def capture(h, timeout, bgr):
+def capture(h, timeout):
     global continuous_mode, trigger_time, frame_rate, frame_counter, fake, last_frame_time
     tnow = time.time()
     due = trigger_time + (1.0/frame_rate)
@@ -73,23 +73,26 @@ def capture(h, timeout, bgr):
     # wait for a new image to appear
     filename = os.path.realpath(fake)
     pgm = load_image(filename)
+    bgr = None
 
     if continuous_mode:
     	try:
 		print 'mock_flea::capture converting raw to bgr'
-		convertRawToBGR(pgm, bgr)
+		bgr = convertRawToBGR(pgm)
     	except Exception, msg:
         	raise scanner.error('missing %s' % fake)
     frame_counter += 1
     trigger_time = time.time()
     print 'mock_flea::capture returning data'
-    return trigger_time, frame_counter, 0, pgm
+    return trigger_time, frame_counter, 0, bgr
 
-def convertRawToBGR(pgm, bgr):
+def convertRawToBGR(pgm):
     global image_width, image_height
     raw = pgm.array
     print 'mock_flea::convertRawToBGR debayer'
+    bgr = numpy.zeros((image_height, image_width, 3), dtype='uint8')
     scanner.debayer(raw, bgr)
+    return bgr
 
 def close(h):
     return
@@ -109,9 +112,9 @@ def set_framerate(h, framerate):
         frame_rate = 1.875;
 
 def save_pgm(filename, raw):
-    #mat = cv.GetMat(cv.fromarray(raw))
-    #return cv.SaveImage(filename, mat)
-    shutil.copyfile(fake, filename)
+    mat = cv.GetMat(cv.fromarray(raw))
+    return cv.SaveImage(filename, mat)
+    #shutil.copyfile(fake, filename)
 
 def save_file(filename, bytes):
     return scanner.save_file(filename, bytes)

@@ -55,25 +55,28 @@ def trigger(h, continuous):
 	continuous_mode = continuous
 	flea.trigger(h, continuous)
 
-def capture(h, timeout, bgr):
+def capture(h, timeout):
 	global continuous_mode, image_height, image_width
 	raw = numpy.zeros((image_height, image_width), dtype='uint8')
 	frame_time, frame_counter, shutter = flea.capture(h, timeout, raw)
+	bgr = None
 	if continuous_mode:
 		print 'flea::capture In continuous mode...'
-		convertRawToBGR(raw, bgr)
+		bgr = convertRawToBGR(raw)
 		if bgr is None:
-			print 'flea::capture Rats...' 
+			print 'flea::capture Rats...'
 		print 'flea::capture Returning bgr'
-	return frame_time, frame_counter, shutter, raw 
+	return frame_time, frame_counter, shutter, bgr
 	
-def convertRawToBGR(raw, bgr):
+def convertRawToBGR(raw):
 	global image_width, image_height
 	print 'flea::convertRawToBGR debayer'
+    	bgr = numpy.zeros((image_height, image_width, 3), dtype='uint8')
 	try:
 		scanner.debayer(raw, bgr)
 	except Exception, msg:
 		print 'Exception: %s' % msg
+	return bgr
 
 def set_gamma(h, gamma):
 	flea.set_gamma(h, gamma)
@@ -102,10 +105,10 @@ def set_auto_gain(h):
 def set_brightness(h):
 	flea.set_brightness(h)
 
-def save_pgm(filename, raw):
-	flea.save_pgm(filename, raw)
-	#mat = cv.GetMat(cv.fromarray(bgr))
-	#return cv.SaveImage(filename, mat)
+def save_pgm(filename, bgr):
+	#flea.save_pgm(filename, raw)
+	mat = cv.GetMat(cv.fromarray(bgr))
+	return cv.SaveImage(filename, mat)
 
 def save_file(filename, bytes):
 	flea.save_file(filename, bytes)
