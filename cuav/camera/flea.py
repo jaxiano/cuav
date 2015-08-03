@@ -55,6 +55,10 @@ def trigger(h, continuous):
 	continuous_mode = continuous
 	flea.trigger(h, continuous)
 
+def load_image(filename):
+	raw = cuav_util.LoadImage(filename)
+	return numpy.asarray(cv.GetMat(raw))
+
 def capture(h, timeout):
 	global continuous_mode, image_height, image_width
 	raw = numpy.zeros((image_height, image_width), dtype='uint8')
@@ -66,7 +70,7 @@ def capture(h, timeout):
 		if bgr is None:
 			print 'flea::capture Rats...'
 		print 'flea::capture Returning bgr'
-	return frame_time, frame_counter, shutter, bgr
+	return frame_time, frame_counter, shutter, bgr, bgr
 	
 def convertRawToBGR(raw):
 	global image_width, image_height

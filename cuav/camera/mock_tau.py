@@ -5,7 +5,8 @@ emulate a chameleon camera, getting images from a playback tool
 The API is the same as the chameleon module, but takes images from fake_chameleon.pgm
 '''
 
-import time, os, sys, cv, numpy
+import __builtin__
+import time, os, sys, cv, numpy, shutil
 
 from cuav.camera.cam_params import CameraParams
 from cuav.lib import cuav_util
@@ -52,6 +53,9 @@ def trigger(h, continuous):
 # 640x480 16-bit PNG
 def load_image(filename):
     print "tau::load_image"
+    bgr = numpy.zeros((image_height, image_width, 3), dtype='uint8')
+    scanner.png_raw_to_bgr(bgr, filename)
+    return bgr
 
 def capture(h, timeout):
     print "tau::capture"
@@ -79,7 +83,7 @@ def capture(h, timeout):
     frame_counter += 1
     trigger_time = time.time()
     print "trigger_time:%i, frame_counter:%i" % (trigger_time, frame_counter) 
-    return trigger_time, frame_counter, 0, bgr 
+    return trigger_time, frame_counter, 0, bgr, read_binary(fake)
 
 def close(h):
     print "tau::close"
@@ -99,12 +103,18 @@ def set_framerate(h, framerate):
     else:
         frame_rate = 1.875;
 
-def save_pgm(filename, bgr):
-    mat = cv.GetMat(cv.fromarray(bgr))
-    return cv.SaveImage(filename, mat)
+def save_pgm(filename, raw):
+    #mat = cv.GetMat(cv.fromarray(bgr))
+    #return cv.SaveImage(filename, mat)
+    with __builtin__.open(filename, 'wb') as file:
+    	file.write(raw)
 
 def save_file(filename, bytes):
     return scanner.save_file(filename, bytes)
+
+def read_binary(filename):
+     with __builtin__.open(filename, 'rb') as file:
+     	return file.read()
 
 def set_brightness(h):
     pass

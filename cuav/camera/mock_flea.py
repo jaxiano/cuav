@@ -48,20 +48,20 @@ def trigger(h, continuous):
     trigger_time = time.time()
 
 
-def load_image(filename):
+def load_fake_image(filename):
     print "Loading mock file: %s" % filename
     if filename.endswith('.pgm'):
-        pgm = cuav_util.PGM(filename)
-	#bgr = numpy.zeros((image_height, image_width, 3), dtype='uint8')
-	#scanner.debayer(pgm.array, bgr)
-        #return cv.GetImage(cv.fromarray(bgr))
-	return pgm 
-    img = cv.LoadImage(filename)
+	return cuav_util.PGM(filename)
+
+    img = cuav_util.LoadImage(filename)
     array = numpy.ascontiguousarray(cv.GetMat(img))
     grey = numpy.zeros((image_height, image_width), dtype='uint8')
     scanner.rebayer(array, grey)
     return array
     
+def load_image(filename):
+    img = cuav_util.LoadImage(filename=filename)
+    return numpy.asarray(cv.GetMat(img))
 
 def capture(h, timeout):
     global continuous_mode, trigger_time, frame_rate, frame_counter, fake, last_frame_time
@@ -72,19 +72,19 @@ def capture(h, timeout):
         timeout -= int(due*1000)
     # wait for a new image to appear
     filename = os.path.realpath(fake)
-    pgm = load_image(filename)
+    pgm = load_fake_image(filename)
     bgr = None
 
     if continuous_mode:
     	try:
 		print 'mock_flea::capture converting raw to bgr'
-		bgr = convertRawToBGR(pgm)
+    		bgr = convertRawToBGR(pgm)
     	except Exception, msg:
         	raise scanner.error('missing %s' % fake)
     frame_counter += 1
     trigger_time = time.time()
     print 'mock_flea::capture returning data'
-    return trigger_time, frame_counter, 0, bgr
+    return trigger_time, frame_counter, 0, bgr, bgr
 
 def convertRawToBGR(pgm):
     global image_width, image_height

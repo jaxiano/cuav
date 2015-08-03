@@ -427,7 +427,7 @@ class CameraModule(mp_module.MPModule):
                 #im = numpy.zeros((self.camera_settings.height,self.camera_settings.width),dtype='uint8' if self.camera_settings.depth==8 else 'uint16')
                 base_time = time.time()
                 sensor.trigger(h, False)
-                frame_time, frame_counter, shutter, nothing = sensor.capture(h, 1000)
+                frame_time, frame_counter, shutter, nothing, nothing = sensor.capture(h, 1000)
                 base_time -= frame_time
             except sensor.error, msg:
                 print('failed to capture: {0}'.format(msg))
@@ -524,7 +524,7 @@ class CameraModule(mp_module.MPModule):
                 capture_time = time.time()
                 
                 # capture an image
-                frame_time, frame_counter, shutter, bgr = sensor.capture(h, 1000)
+                frame_time, frame_counter, shutter, bgr, raw = sensor.capture(h, 1000)
 		self.camera_settings.height = bgr.shape[0]
 		self.camera_settings.width = bgr.shape[1]
 		#self.camera_settings.depth = bgr.shape[2]
@@ -557,7 +557,7 @@ class CameraModule(mp_module.MPModule):
                                                         self.camera_settings.gamma))
                 gammalog.flush()
 
-                self.save_queue.put((img_time, bgr))
+                self.save_queue.put((img_time, raw))
                 self.scan_queue.put((img_time, bgr))
                 self.capture_count += 1
 
@@ -1364,8 +1364,7 @@ class CameraModule(mp_module.MPModule):
             return
         try:
 	    print 'handle_image_request: %s' % filename
-	    img = cuav_util.LoadImage(filename=filename, height=self.camera_settings.height, width=self.camera_settings.width, rotate180=self.camera_settings.rotate180)
-            img = numpy.asarray(cv.GetMat(img))
+	    img = sensor.load_image(filename)
         except Exception:
             return
         if not obj.fullres:

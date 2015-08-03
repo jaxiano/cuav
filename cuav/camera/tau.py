@@ -5,6 +5,7 @@ emulate a chameleon camera, getting images from a playback tool
 The API is the same as the chameleon module, but takes images from fake_chameleon.pgm
 '''
 
+import __builtin__
 from . import sightline
 import time, os, sys, cv, numpy, glob
 
@@ -62,6 +63,9 @@ def trigger(h, continuous):
 # 640x480 16-bit PNG
 def load_image(filename):
     print "tau::load_image"
+    bgr = numpy.zeros((image_height, image_width, 3), dtype='uint8')
+    scanner.png_raw_to_bgr(bgr, filename)
+    return bgr
 
 def request_image():
     print 'Initializing Sightline Connector' 
@@ -86,6 +90,7 @@ def capture(h, timeout):
 
     # wait for a new image to appear
     bgr = None
+    raw = None
     if continuous_mode:
     	try:
 		counter = 0
@@ -118,6 +123,7 @@ def capture(h, timeout):
     		print"tau::capture img shape height:%i,width%i" % (bgr.shape[0],bgr.shape[1])
 		print 'tau::capture calling convert_png_raw_to_bgr'
 		scanner.png_raw_to_bgr(bgr, raw_png_path)
+		raw = read_binary(raw_png_path)
 		os.remove(raw_png_path)
     	except Exception, msg:
         	raise scanner.error('missing %s' % raw_png_path)
@@ -125,7 +131,7 @@ def capture(h, timeout):
     frame_counter += 1
     trigger_time = time.time()
     print "trigger_time:%i, frame_counter:%i" % (trigger_time, frame_counter) 
-    return trigger_time, frame_counter, 0, bgr 
+    return trigger_time, frame_counter, 0, bgr, raw 
 
 def close(h):
     print "tau::close"
@@ -145,12 +151,18 @@ def set_framerate(h, framerate):
     else:
         frame_rate = 1.875;
 
-def save_pgm(filename, bgr):
-    mat = cv.GetMat(cv.fromarray(bgr))
-    return cv.SaveImage(filename, mat)
+def save_pgm(filename, raw):
+    #mat = cv.GetMat(cv.fromarray(bgr))
+    #return cv.SaveImage(filename, mat)
+    with __builtin__.open(filename, 'wb') as file:
+    	file.write(raw)
 
 def save_file(filename, bytes):
     return scanner.save_file(filename, bytes)
+
+def read_binary(filename):
+     with __builtin__.open(filename, 'rb') as file:
+     	return file.read()
 
 def set_brightness(h):
     pass
