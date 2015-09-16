@@ -396,6 +396,8 @@ class CameraModule(mp_module.MPModule):
             h = sensor.open(1, self.camera_settings.depth, self.camera_settings.capture_brightness, self.camera_settings.height, self.camera_settings.width)
 	    self.camera_settings.height, self.camera_settings.width = sensor.get_resolution()
 	    self.auto_settings = self.get_auto_settings(h)
+	    print 'airstart'
+	    self.print_auto_settings(self.auto_settings)
             time.sleep(0.1)
             sensor.close(h)
 
@@ -440,6 +442,8 @@ class CameraModule(mp_module.MPModule):
                 h = sensor.open(1, self.camera_settings.depth, self.camera_settings.capture_brightness, self.camera_settings.height, self.camera_settings.width)
 	        self.camera_settings.height, self.camera_settings.width = sensor.get_resolution()
 	self.auto_settings = self.get_auto_settings(h)
+	print 'get_base_time'
+	self.print_auto_settings(self.auto_settings)
         print('base_time=%f' % base_time)
         return h, base_time, frame_time
 
@@ -502,9 +506,9 @@ class CameraModule(mp_module.MPModule):
                 #else:
                 #    im = numpy.zeros((self.camera_settings.height, self.camera_settings.width),dtype='uint8')
 
-                if last_gamma != self.camera_settings.gamma:
-                    sensor.set_gamma(h, self.camera_settings.gamma)
-                    last_gamma = self.camera_settings.gamma
+                #if last_gamma != self.camera_settings.gamma:
+                #    sensor.set_gamma(h, self.camera_settings.gamma)
+                #    last_gamma = self.camera_settings.gamma
                 if last_framerate != int(self.camera_settings.framerate):
                     sensor.set_framerate(h, int(self.camera_settings.framerate))
                     last_framerate = int(self.camera_settings.framerate)
@@ -518,7 +522,8 @@ class CameraModule(mp_module.MPModule):
 		    sensor.set_gamma(h, float(obj['gamma']));
                     self.new_auto_settings = None 
 		    self.auto_settings = self.get_auto_settings(h)  
-
+		    print 'set new settings'
+		    self.print_auto_settings(self.auto_settings)
                 self.check_camera_parms()
 
                 capture_time = time.time()
@@ -1239,24 +1244,28 @@ class CameraModule(mp_module.MPModule):
             bsend.send(buf, priority=1000)
 
         if isinstance(obj, ChangeAutoSettings):
-            buf = 'Change Auto Settings\n'
-            buf = '{0} Exposure - value: {1} auto: {2} onOff {3}'.format(buf, obj.settings['exposure']['value'], obj.settings['exposure']['auto'], obj.settings['exposure']['on'])
-
-            buf = '{0} Shutter - value: {1} auto: {2} onOff {3}'.format(buf, obj.settings['shutter']['value'], obj.settings['shutter']['auto'], obj.settings['shutter']['on'])
-
-            buf = '{0} Gain - value: {1} auto: {2} onOff {3}'.format(buf, obj.settings['gain']['value'], obj.settings['gain']['auto'], obj.settings['gain']['on'])
-            buf = '{0} Brightness: {1}  Gamma: {2}'.format(buf, obj.settings['brightness'], obj.settings['gamma'])
-            print buf
             self.new_auto_settings = obj.settings
+	    self.print_auto_settings(self.new_auto_settings)
             pkt = CommandResponse(buf)
             buf = cPickle.dumps(pkt, cPickle.HIGHEST_PROTOCOL)
             bsend.send(buf, priority=1000)
 
         if isinstance(obj, GetAutoSettings):
+	    print 'GetAutoSettings'
+	    self.print_auto_settings(self.auto_settings)
             pkt = ChangeAutoSettings(self.auto_settings)
             buf = cPickle.dumps(pkt, cPickle.HIGHEST_PROTOCOL)
             bsend.send(buf, priority=10000)
 
+    def print_auto_settings(self, settings):
+            buf = 'Change Auto Settings\n'
+            buf = '{0} Exposure - value: {1} auto: {2} onOff {3}'.format(buf, settings['exposure']['value'], settings['exposure']['auto'], settings['exposure']['on'])
+
+            buf = '{0} Shutter - value: {1} auto: {2} onOff {3}'.format(buf, settings['shutter']['value'], settings['shutter']['auto'], settings['shutter']['on'])
+
+            buf = '{0} Gain - value: {1} auto: {2} onOff {3}'.format(buf, settings['gain']['value'], settings['gain']['auto'], settings['gain']['on'])
+            buf = '{0} Brightness: {1}  Gamma: {2}'.format(buf, settings['brightness'], settings['gamma'])
+            print buf
 
     def get_auto_settings(self, h):
         settings = {"exposure": {},

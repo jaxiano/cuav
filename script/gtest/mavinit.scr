@@ -23,5 +23,5 @@ camera set width 1280
 camera set debug true
 camera set clock_sync false
 camera set save_pgm 1
-camera set gcs_address 10.0.107.69
+camera set gcs_address 192.168.168.11
 camera airstart

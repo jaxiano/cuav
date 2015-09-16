@@ -97,17 +97,17 @@ def get_auto_setting(h, settings):
 def set_framerate(h, framerate):
 	flea.set_framerate(h, framerate)
 
-def set_auto_exposure(h):
-	flea.set_auto_exposure(h)
+def set_auto_exposure(h, auto, onoff, value):
+	flea.set_auto_exposure(h, auto, onoff, value)
 
-def set_auto_shutter(h):
-	flea.set_auto_shutter(h)
+def set_auto_shutter(h, auto, onoff, value):
+	flea.set_auto_shutter(h, auto, onoff, value)
 
-def set_auto_gain(h):
-	flea.set_auto_gain(h)
+def set_auto_gain(h, auto, onoff, value):
+	flea.set_auto_gain(h, auto, onoff, value)
 
-def set_brightness(h):
-	flea.set_brightness(h)
+def set_brightness(h, value):
+	flea.set_brightness(h, value)
 
 def save_pgm(filename, bgr):
 	#flea.save_pgm(filename, raw)
