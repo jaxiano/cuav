@@ -92,13 +92,13 @@ void capture(char *filename)
     ImageFileParams.nFileType = IS_IMG_PNG;
     nRet = is_ImageFile(hCam, IS_IMAGE_FILE_CMD_SAVE, (void *)&ImageFileParams, sizeof(ImageFileParams));
     printf("Status is_ImageFile %d\n", nRet);
-
-    nRet = is_FreeImageMem(hCam, pMem, memID);
-    printf("Status is_FreeImageMem %d\n", nRet);
 }
 
 void close_camera()
 {
+    int nRet = is_FreeImageMem(hCam, pMem, memID);
+    printf("Status is_FreeImageMem %d\n", nRet);
+
     is_ExitCamera(hCam);
 }
 

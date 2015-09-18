@@ -15,7 +15,7 @@ from cuav.camera import libids as ids
 error = scanner.error
 config_file = 'cuav/data/ids.json'
 
-fake = 'cuav/tests/test-ids.png'
+raw_png = '/home/odroid/Downloads/ids/ids.png'
 frame_counter = 0
 trigger_time = 0
 frame_rate = 7.5
@@ -42,7 +42,7 @@ def get_resolution():
 def open(colour, depth, brightness, height, width):
     print 'Requested (%ix%i). Using (%i,%i)' % (width,height,image_width,image_height)
 
-	ids.open(image_height, image_width)
+    ids.open(image_height, image_width)
     return 0
 
 def trigger(h, continuous):
@@ -59,22 +59,21 @@ def load_image(filename):
     return array
     
 def capture(h, timeout):
-    global continuous_mode, trigger_time, frame_rate, frame_counter, fake, last_frame_time
+    global continuous_mode, trigger_time, frame_rate, frame_counter, raw_png, last_frame_time
     tnow = time.time()
     due = trigger_time + (1.0/frame_rate)
     if tnow < due:
         time.sleep(due - tnow)
         timeout -= int(due*1000)
     # wait for a new image to appear
-    filename = os.path.realpath(fake)
     bgr = None
 
     if continuous_mode:
     	try:
-			ret = ids.capture('./image.png')
-    		bgr = load_image(filename)
+		ret = ids.capture(raw_png)
+    		bgr = load_image(raw_png)
     	except Exception, msg:
-        	raise scanner.error('missing %s' % fake)
+        	raise scanner.error('missing %s' % raw_png)
     frame_counter += 1
     trigger_time = time.time()
     print 'mock_ids::capture returning data'
@@ -82,7 +81,6 @@ def capture(h, timeout):
 
 def close(h):
 	ids.close()
-    return
 
 def set_gamma(h, gamma):
     pass
