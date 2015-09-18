@@ -43,9 +43,10 @@ def init_tau():
 	ext_modules.append(tau)
 
 def init_ids():
-	ids = Extension('',
-			sources = [],
-			libraries = [])
+	ids = Extension('cuav.camera.libids',
+			sources = ['cuav/camera/ids_py.c',
+                       'cuav/camera/ids_lib.c'],
+			libraries = ['ueye_api'])
 	ext_modules.append(ids)
 
 def build_config(camera_type):
