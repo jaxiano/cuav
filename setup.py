@@ -42,6 +42,12 @@ def init_tau():
 			libraries = [])
 	ext_modules.append(tau)
 
+def init_ids():
+	ids = Extension('',
+			sources = [],
+			libraries = [])
+	ext_modules.append(ids)
+
 def build_config(camera_type):
     global sensor
 
@@ -51,8 +57,11 @@ def build_config(camera_type):
     print '====== camera_type: %s' % sensor 
 
     if camera_type == "tau":
-	init_tau()
-	src = "cuav/settings/settings_tau.py"
+        init_tau()
+        src = "cuav/settings/settings_tau.py"
+    elif camera_type == "ids":
+        init_ids()
+        src = "cuav/settings/settings_ids.py"
     else:
         init_flea()
         src = "cuav/settings/settings_flea.py"
@@ -84,6 +93,15 @@ class Tau(Command):
 	pass
    def run(self):
 	build_config("tau")
+
+class IDS(Command):
+   user_options=[]
+   def initialize_options(self):
+	pass
+   def finalize_options(self):
+	pass
+   def run(self):
+	build_config("ids")
 
 setup (name = 'cuav',
         zip_safe=True,
@@ -117,13 +135,16 @@ setup (name = 'cuav',
         package_data = { 'cuav' : [ 'tests/test-8bit.pgm',
 				    'tests/test-flea.pgm',
 				    'tests/test-tau.png',
-                                   'data/chameleon1_arecont0.json',
-				   'data/flea.json',
-                                   'camera/include/*.h']},
+                    'tests/test-ids.png',
+                    'data/chameleon1_arecont0.json',
+                    'data/flea.json',
+                    'data/ids.json',
+                    'camera/include/*.h']},
         ext_modules = ext_modules,
 	cmdclass={
 		'flea':Flea
 		,'tau':Tau
+        ,'ids':IDS
 		,'build_py':BuildPyCommand
 	}
 )
