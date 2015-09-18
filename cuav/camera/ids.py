@@ -5,18 +5,23 @@ emulate a chameleon camera, getting images from a playback tool
 The API is the same as the chameleon module, but takes images from fake_chameleon.pgm
 '''
 
-import time, os, sys, cv, numpy
+import time, os, sys, cv, numpy, shutil
 
 from cuav.camera.cam_params import CameraParams
 from cuav.lib import cuav_util
 from cuav.image import scanner
-from cuav.camera import libflea as flea
+from cuav.camera import libids as ids
 
 error = scanner.error
-config_file = 'cuav/data/flea.json'
+config_file = 'cuav/data/ids.json'
 
-image_height = 2048
-image_width = 2448
+fake = 'cuav/tests/test-ids.png'
+frame_counter = 0
+trigger_time = 0
+frame_rate = 7.5
+last_frame_time = 0
+image_height = 2048 
+image_width = 2048
 continuous_mode = False
 
 def load_camera_settings():
@@ -35,86 +40,91 @@ def get_resolution():
 	return image_height, image_width
 
 def open(colour, depth, brightness, height, width):
-	global image_width, image_height
-	
-	if height > 0 and width > 0:
-		image_height = min(image_height, height)
-		image_width = min(image_width, width)
-	
-	print 'Requested (%ix%i). Using (%i,%i)' % (width,height,image_width,image_height)
-	return flea.open(colour, depth, brightness, image_height, image_width)
+    print 'Requested (%ix%i). Using (%i,%i)' % (width,height,image_width,image_height)
 
-def close(h):
-	print 'flea::close'
-	flea.close(h)    
+	ids.open(image_height, image_width)
+    return 0
 
 def trigger(h, continuous):
-	global continuous_mode
+    global continuous_mode, trigger_time
+    continuous_mode = continuous
+    trigger_time = time.time()
 
-	print 'flea::trigger continuous_mode: %i' % continuous
-	continuous_mode = continuous
-	flea.trigger(h, continuous)
 
 def load_image(filename):
-	raw = cuav_util.LoadImage(filename)
-	return numpy.asarray(cv.GetMat(raw))
+    print "Loading file: %s" % filename
 
+    img = cuav_util.LoadImage(filename)
+    array = numpy.ascontiguousarray(cv.GetMat(img))
+    return array
+    
 def capture(h, timeout):
-	global continuous_mode, image_height, image_width
-	raw = numpy.zeros((image_height, image_width), dtype='uint8')
-	frame_time, frame_counter, shutter = flea.capture(h, timeout, raw)
-	bgr = None
-	if continuous_mode:
-		print 'flea::capture In continuous mode...'
-		bgr = convertRawToBGR(raw)
-		if bgr is None:
-			print 'flea::capture Rats...'
-		print 'flea::capture Returning bgr'
-	return frame_time, frame_counter, shutter, bgr, bgr
-	
-def convertRawToBGR(raw):
-	global image_width, image_height
-	print 'flea::convertRawToBGR debayer'
-    	bgr = numpy.zeros((image_height, image_width, 3), dtype='uint8')
-	try:
-		scanner.debayer(raw, bgr)
-	except Exception, msg:
-		print 'Exception: %s' % msg
-	return bgr
+    global continuous_mode, trigger_time, frame_rate, frame_counter, fake, last_frame_time
+    tnow = time.time()
+    due = trigger_time + (1.0/frame_rate)
+    if tnow < due:
+        time.sleep(due - tnow)
+        timeout -= int(due*1000)
+    # wait for a new image to appear
+    filename = os.path.realpath(fake)
+    bgr = None
+
+    if continuous_mode:
+    	try:
+			ret = ids.capture('./image.png')
+    		bgr = load_image(filename)
+    	except Exception, msg:
+        	raise scanner.error('missing %s' % fake)
+    frame_counter += 1
+    trigger_time = time.time()
+    print 'mock_ids::capture returning data'
+    return trigger_time, frame_counter, 0, bgr, bgr
+
+def close(h):
+	ids.close()
+    return
 
 def set_gamma(h, gamma):
-	flea.set_gamma(h, gamma)
-
-def get_gamma(h):
-	return flea.get_gamma(h)
-
-def get_brightness(h):
-	return flea.get_brightness(h)
-
-def get_auto_setting(h, settings):
-	return flea.get_auto_setting(h, settings)
+    pass
 
 def set_framerate(h, framerate):
-	flea.set_framerate(h, framerate)
+    global frame_rate
+    if framerate >= 15:
+        frame_rate = 15
+    elif framerate >= 7:
+        frame_rate = 7.5
+    elif framerate >= 3:
+        frame_rate = 3.75
+    else:
+        frame_rate = 1.875;
 
-def set_auto_exposure(h, auto, onoff, value):
-	flea.set_auto_exposure(h, auto, onoff, value)
-
-def set_auto_shutter(h, auto, onoff, value):
-	flea.set_auto_shutter(h, auto, onoff, value)
-
-def set_auto_gain(h, auto, onoff, value):
-	flea.set_auto_gain(h, auto, onoff, value)
-
-def set_brightness(h, value):
-	flea.set_brightness(h, value)
-
-def save_pgm(filename, bgr):
-	#flea.save_pgm(filename, raw)
-	mat = cv.GetMat(cv.fromarray(bgr))
-	return cv.SaveImage(filename, mat)
+def save_pgm(filename, raw):
+    mat = cv.GetMat(cv.fromarray(raw))
+    return cv.SaveImage(filename, mat)
+    #shutil.copyfile(fake, filename)
 
 def save_file(filename, bytes):
-	flea.save_file(filename, bytes)
+    return scanner.save_file(filename, bytes)
+
+def set_brightness(h):
+    pass
+
+def set_auto_exposure(h):
+    pass
+
+def set_auto_shutter(h):
+    pass
+
+def set_auto_gain(h):
+    pass
+
+def get_gamma(h):
+    pass
+
+def get_brightness(h):
+    pass
+
+def get_auto_setting(h, settings):
+    return [0,0,0]
 
 load_camera_settings()
