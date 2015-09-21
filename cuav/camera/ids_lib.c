@@ -71,6 +71,9 @@ int open_camera(unsigned int new_height, unsigned int new_width)
 
 		nRet = is_SetExternalTrigger(hCam, IS_SET_TRIGGER_SOFTWARE);
 		printf("Status is_SetExternalTrigger %d\n", nRet);
+		
+		nRet = is_StopLiveVideo(hCam, IS_WAIT);
+		printf("Status is_StopLiveVideo %d\n", nRet);
     }
 
     return nRet;
