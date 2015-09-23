@@ -15,7 +15,7 @@ from cuav.camera import libids as ids
 error = scanner.error
 config_file = 'cuav/data/ids.json'
 
-raw_png = '/home/odroid/Downloads/ids/ids.png'
+raw_png = '/data/ids/ids.png'
 frame_counter = 0
 trigger_time = 0
 frame_rate = 7.5
