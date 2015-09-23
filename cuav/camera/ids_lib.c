@@ -1,6 +1,7 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <stdbool.h>
 #include <ueye.h>
 #include <ueye_deprecated.h>
 
@@ -10,9 +11,13 @@
 HIDS hCam = 1;
 char *pMem = NULL;
 int memID = 0;
+static bool initialized = false;
 
 int open_camera(unsigned int new_height, unsigned int new_width)
 {
+	if (initialized == true)
+	    return;
+
 	int num_cam;
 	is_GetNumberOfCameras(&num_cam);
 	printf("# Cams Detected: %d\n", num_cam);
@@ -22,6 +27,7 @@ int open_camera(unsigned int new_height, unsigned int new_width)
 	    sleep(2);
 	    nRet = is_InitCamera(&hCam, NULL);
 	} while(nRet != IS_SUCCESS);
+	initialized = true;
 
         nRet = is_ParameterSet( hCam, IS_PARAMETERSET_CMD_LOAD_EEPROM, NULL, 0 );
 	printf("Status loading parameter %d\n", nRet);
@@ -102,10 +108,10 @@ void capture(char *filename)
 
 void close_camera()
 {
-    int nRet = is_FreeImageMem(hCam, pMem, memID);
-    printf("Status is_FreeImageMem %d\n", nRet);
-
-    is_ExitCamera(hCam);
+//    int nRet = is_FreeImageMem(hCam, pMem, memID);
+//    printf("Status is_FreeImageMem %d\n", nRet);
+//
+//    is_ExitCamera(hCam);
 }
 
 
