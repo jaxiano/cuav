@@ -1,0 +1,587 @@
+[Re-Flashing Odroid U3 - Need Internet access]
+1. Flash the eMMC board. Use the adapter and plug it into USB:
+  a) sudo apt-get install pv
+  b) sudo umount /dev/sdb1 (if present)
+  c) sudo umount /dev/sdb2 (if present)
+  d) sudo dd if=ubuntu-14.04.1lts-lubuntu-odroid-u-20140814.img | pv | sudo dd of=/dev/sdb
+
+2. Connect the eMMC board on the Odroid and power it up
+
+3. Launch Odroid Settings
+  a) resize root partition to increase root storage capacity
+  b) disable Xorg to disable GUI on startup
+  
+4. Auto-login at boot:
+  a) sudo vi /etc/init/tty1.conf
+  b) Add "--autologin root" at the end of the "/sbin/getty" line
+
+5. Update OS drivers/libraries
+  a) sudo apt-get update
+  b) sudo apt-get upgrade
+
+[Auto start rc.local]
+1. /etc/rc.local is called by /etc/init.d/rc.local
+2. make sure all scripts called by /etc/rc.local are executable
+  a) chmod 777 /root/Falcon/autostart.sh
+  b) chmod 777 /root/Falcon/mav_falcon.sh
+
+[Create image directories]
+1. mkdir /data/ids
+2. mkdir /data/tau/ftp
+  
+[odroid-specific]
+vi ~/.bashrc
+export PATH="/.local/bin/:$PATH"
+export FAKE_CHAMELEON=1
+source ~/.bashrc
+
+mkdir /data
+mkdir /data/logs
+
+[setup git to pull latest from remote repository]
+mkdir /root/cuav
+cd /root/cuav
+git init
+git remote add lenovo_cuav ubuntu@192.168.168.11:/home/ubuntu/workspace/cuav
+git pull lenovo_cuav master
+
+[git error: Cannot pull, git cannot resolve reference ORIG_HEAD]
+remove .git/ORIG_HEAD and redo the pull
+
+[Install project dependencies]
+apt-get install python-wxgtk2.8 python-matplotlib python-opencv python-pip 
+
+[install libpng]
+cd /to/the/download/directory
+wget http://downloads.sourceforge.net/libpng/libpng-1.6.17.tar.xz
+tar xf libpng-1.6.17.tar.xz
+cd libpng-1.6.17
+./configure --host=arm-linux-gnueabi CC=arm-linux-gnueabihf-gcc \
+    AR=arm-linux-gnueabihf-ar STRIP=arm-linux-gnueabihf-strip RANLIB=arm-linux-gnueabihf-ranlib \
+   --prefix=/usr/local/libpng-1.6.17
+make
+make install
+export LD_LIBRARY_PATH=/usr/local/libpng-1.6.17/lib:$LD_LIBRARY_PATH
+
+**** the libpng library must be in /etc/lib when run from within screen ****
+
+[Install mavproxy/pymavlink]
+git clone git://github.com/tridge/mavproxy.git
+cd mavproxy/
+python setup.py build install --user
+
+[Install cuav]
+**** flycapture.2.6.3.4_armhf ****
+copy include to: /usr/include/flycapture
+copy include/C to: /usr/include/flycapture/C
+copy lib and lib/C to: /usr/lib
+
+git clone git://github.com/tridge/cuav.git
+python setup.py build install --user
+
+[run mavproxy on boot]
+1. vi /root/Falcon/autostart.sh
+#!/bin/bash
+cd /root/cuav
+screen -dmS MAVProxy -s /bin/bash /root/Falcon/mav_falcon.sh
+
+2. vi /root/Falcon/mav_falcon.sh
+#!/bin/bash
+export PATH=$PATH:/bin:/sbin:/usr/bin:/usr/local/bin:/root/.local/bin
+export HOME=/root
+export FAKE_CHAMELEON=1
+mavproxy.py --master=:14550 --aircraft /data
+
+3. crontab -e
+@reboot /usr/bin/nohup /root/Falcon/autostart.sh
+
+===============================================================================================================================================================
+[IP Table]
+GCS 	- 192.168.168.10
+OGCS	- 192.168.168.11
+Odroid	- 192.168.168.203
+Camera	- 192.168.168.204
+
+===============================================================================================================================================================
+[Create VLan]
+sudo apt-get install vlan
+sudo modprobe 8021q
+sudo vconfig add eth0 #, where # is a unique digit
+sudo ifconfig eth0.# xxx.xxx.xxx.xxx
+
+Example:
+sudo vconfig add eth0 2
+sudo ifconfig eth0.2 192.168.168.11
+
+===============================================================================================================================================================
+[Setup IDS camera]
+Successfully installed ueyeethd. Start (as root) with:
+     /etc/init.d/ueyeethdrc start
+ 
+By default, ueyeethd will work with all interfaces found during
+installation.
+To use dedicated interfaces only, edit (as root) the option:
+		[Parameters] - Interfaces
+at /usr/local/share/ueye/ueyeethd/ueyeethd.conf
+one must stop the daemon before editing the configuration file. Alternatively,
+the uEye Camera Manager may be used to configure network interfaces.
+ 
+If ueyeethd hangs and does not terminate on rc 'stop' command, run (as root)
+     /etc/init.d/ueyeethdrc force-stop
+ 
+NOTE that the daemon refuses to terminate if there are clients connected!
+To uninstall, run '/usr/local/share/ueye/bin/ueyed_install-eth uninstall'.
+ 
+If a graphical desktop environment is available, one may use the
+uEye Camera Manager to configure cameras and services. To start
+it, type idscameramanager on the command line or in the graphical application
+launcher. If idscameramanager shall be used for daemon configuration and service
+control, it _must_ be started as root.
+
+===============================================================================================================================================================
+[Installing IDS SDK]
+Follow the instructions: IDS_Linux_for_Embedded_Boards_EN.pdf
+
+[Compiling sample IDS c code on Odroid]
+gcc -Wall <c-code> -lueye_api -o capture
+
+[Testing the sample IDS c code on Odroid]
+1. Install the IDS app on a linux box
+2. Open the camera to ensure the latest camera version
+3. Close the IDS app
+4. Run the sample code
+
+[Preparing Odroid UX3]
+sudo apt-get update
+sudo apt-get upgrade
+sudo apt-get install linux-image-generic-lts-raring
+sudo apt-get install linux-headers-generic-lts-raring
+
+**** install docker and pull contaner ****
+sudo apt-get install docker.io
+sudo docker login
+sudo docker run -it -v ~/Downloads:/dev/Downloads --privileged --name="armhf-mavproxy-deployment" --net="host" johnchu/armhf-mavproxy:deployment /bin/bash
+sudo docker start -i -a armhf-mavproxy-deployment
+
+
+**** to run docker in console debug mode ****
+sudo stop docker.io
+sudo docker -D -d
+Open a new console: sudo docker start -i -a armhf-mavproxy-deployment
+
+[Ubuntu Desktop]
+sudo apt-get update
+sudo apt-get upgrade
+download driver for AMD Radeon Catalyst (fglrx-14.20)
+sudo apt-get install screen python-wxgtk2.8 python-matplotlib python-opencv libcv-dev python-pip python-numpy python2.7-dev libdc1394-22-dev dh-autoreconf
+sudo apt-get install libusb-1.0-0 libusb-1.0-0-dev subversion openssh-server
+sudo apt-get install eclipse-cdt
+sudo pip install cherrypy
+sudo apt-get install python-ws4py
+sudo pip install PyDispatcher
+
+*** install pycharm ***
+http://linuxg.net/how-to-install-pycharm-3-4-on-ubuntu-14-04-linux-mint-17-pinguy-os-14-04-and-other-ubuntu-14-04-derivatives/
+***********************
+
+************************* Install libavg **********************************
+*** https://www.libavg.de/site/projects/libavg/wiki/UbuntuSourceInstall ***
+***************************************************************************
+sudo apt-get install git automake autoconf libtool libxml2-dev \
+libpango1.0-dev librsvg2-dev libgdk-pixbuf2.0-dev libavcodec-dev libavformat-dev \
+libswscale-dev libavresample-dev python-dev libboost-python-dev libboost-thread-dev g++ libSDL-dev \
+libxxf86vm-dev libdc1394-22-dev linux-libc-dev libvdpau-dev
+
+sudo git clone https://github.com/libavg/libavg.git
+cd libavg
+sudo ./bootstrap
+sudo ./configure
+sudo make -j3
+sudo make install
+sudo make check
+
+******************** Easy way to install PyCharm ************************
+*** http://www.sysads.co.uk/2014/06/install-pycharm-3-4-ubuntu-14-04/ ***
+*************************************************************************
+sudo apt-get install openjdk-7-jre
+wget -q -O - http://archive.getdeb.net/getdeb-archive.key | sudo apt-key add -
+sudo sh -c 'echo "deb http://archive.getdeb.net/ubuntu $(lsb_release -sc)-getdeb apps" >> /etc/apt/sources.list.d/getdeb.list'
+sudo apt-get update
+sudo apt-get install pycharm
+
+***************************************************************************
+******************** Easy way to install pymavlink ************************
+***************************************************************************
+git clone git://github.com/tridge/mavproxy.git
+cd mavproxy/
+sudo python setup.py build install
+
+
+[odroid-specific]
+vi ~/.bashrc
+export PATH="/.local/bin/:$PATH"
+export FAKE_CHAMELEON=1
+source ~/.bashrc
+
+apt-get update
+apt-get install git subversion
+apt-get install screen python-wxgtk2.8 python-matplotlib python-opencv python-pip python-numpy python2.7-dev libdc1394-22-dev dh-autoreconf
+apt-get install libusb-1.0-0 libusb-1.0-0-dev
+apt-get install libjpeg-dev
+
+pip install mavproxy --user
+
+mavproxy.py --master=:14550 --aircraft=jtest
+
+[Setup docker on odroid ARM chip]
+make sure dependencies are met: https://packages.debian.org/sid/admin/docker.io
+download ARM docker image: sudo docker run -it mazzolino/armhf-ubuntu:14.04 /bin/bash
+to create a new docker instance: sudo docker run -it -v ~/Downloads:/dev/Downloads -v /dev/ttyUSB0:/dev/ttyUSB0 --privileged --name="armhf-mavproxy" --net="host" mazzolino/armh-ubuntu:14.04 /bin/bash
+before resuming, find out the <container_name>: sudo docker ps
+to resume existing container instance: sudo docker start -i -a <container_name>
+
+
+[cuav tag]
+git clone git://github.com/tridge/cuav.git
+remove libjpegturbo restriction from: cuav/setup.py and cuav/cuav/image/scanner.c
+copy include to: /usr/include/flycapture
+copy include/C to: /usr/include/flycapture/C
+copy lib and lib/C to: /usr/lib
+
+python setup.py build install --user
+
+[Nice to have installs]
+sudo apt-get install subversion
+sudo apt-get install git
+
+[Prep]
+sudo apt-get update
+sudo apt-get upgrade
+sudo apt-get install screen python-wxgtk2.8 python-matplotlib python-opencv python-pip python-numpy python2.7-dev libdc1394-22-dev dh-autoreconf
+sudo apt-get install libusb-1.0-0 libusb-1.0-0-dev
+
+[Setup tty]
+- check active tty: dmesg | grep tty
+- configure tty: sudo stty -F /dev/ttyUSB0 9600 echo
+- startup serial session: screen /dev/ttyUSB0 9600
+
+[Custom build mavproxy, which should also install pymavlink]
+git clone git://github.com/tridge/mavproxy.git
+cd mavproxy/
+python setup.py build install --user
+
+[install libpng]
+cd /to/the/download/directory
+wget http://downloads.sourceforge.net/libpng/libpng-1.6.17.tar.xz
+tar xf http://downloads.sourceforge.net/libpng/libpng-1.6.17.tar.xz
+cd libpng-1.6.17
+./configure --host=arm-linux-gnueabi CC=arm-linux-gnueabihf-gcc \
+    AR=arm-linux-gnueabihf-ar STRIP=arm-linux-gnueabihf-strip RANLIB=arm-linux-gnueabihf-ranlib \
+   --prefix=/usr/local/libpng-1.6.17
+make
+make install
+export LD_LIBRARY_PATH=/usr/local/libpng-1.6.17/lib:$LD_LIBRARY_PATH
+
+[Notes]
+- sudo docker login
+    - username: johnchu
+    - password: docker5323
+    - email: johnchu@hotmail.com
+- sudo docker run -it -v ~/Downloads:/dev/Downloads --privileged --name="armhf-mavproxy" --net="host" johnchu/armhf-mavproxy:cuav-flea /bin/bash
+- Be sure to use Mavproxy 1.3.13 and Pymavlink 1.1.36
+- Benign error: ImportError: No module named mavproxy_cuav.modules.camera
+- Be ~/.tilecache directory is non-root
+- apt-get update lists are stored in: /etc/apt/sources.list.d
+- to view a formatted json payload: cat <json file> | python -mjson.tool
+- list docker containers: sudo docker ps
+- create docker image from container:
+    - exit the container by using: Ctlr+p+Ctrl+q
+    - to get the docker container ID: sudo docker ps 
+    - sudo docker commit <containerId> johnchu/<dockerImageName>
+    - publish to docker repository: sudo docker push johnchu/<dockerImageName>
+- git version control
+  - sudo git add <files>
+  - sudo git commit -m <description> <list of files>
+  - sudo git push --repo=https://github.com/jaxiano/cuav
+- setup ftp on ondroid (not docker)
+  - sudo apt-get install vsftpd
+  - sudo vi /etc/vsftpd.conf
+    - listen=YES
+    - anonymous_enable=YES
+    - local_enable=YES
+    - write_enable=YES
+    - anon-upload_enable=YES
+    - anon_root=/home/odroid/Downloads/ftp
+    - anon_mkdir_write_enable=YES
+    - use_localtime=YES
+    - xferlog_enable=YES
+    - connect_from_port_20=YES
+    - chown_uploads=YES
+    - chown_username=odroid
+    - xferlog_file=/var/log/vsftpd.log
+    - secure_chroot_dir=/var/run/vsftpd/empty
+    - pam_service_name=vsftpd
+    - rsa_cert_file=/etc/ssl/certs/ssl-cert-snakeoil.pem
+    - rsa_private_key_file=/etc/ssl/private/ssl-cert-snakeoil.key
+  - the anonymous ftp root directory should be owned by odroid:odroid
+  - uploaded files must be dropped into a child directory with world permission:
+    - mkdir images
+    - chmod 777 images
+  - sudo restart vsftpd
+  - to test the ftp server, on the client:
+    - ftp <ip address>
+    - username: anonymous
+    - password: <ENTER>
+    - to upload a test file, put /path/to/file/testfile images/testfile
+  - to attach to active screen session
+    - screen -r
+  - to detach from current screen session
+    - CTRL + A + D
+  - to exit docker
+    - CTRL + P + Q
+  - search for file
+    - find / -name <string>
+    - grep -rnw <directory> -e <pattern>
+  - grep --include=*.py -rnw /. -e <pattern>
+  - VI split screen
+    - :split <filename>
+    - CTRL + W + <up/down arrow> to switch window
+
+[Python Virtual Environment]
+1. Create virtual env: virtualenv <projectname>
+2. start virtual env: source <projectname>/bin/activate
+3. stop virtual env: deactivate
+4. generate dependency file: pip freeze > dep.txt
+
+[Upgrade default chardet to latest, in this case the latest is v2.3.0]
+Download chardet from: https://pypi.python.org/pypi/chardet
+or wget https://pypi.python.org/packages/source/c/chardet/chardet-2.3.0.tar.gz
+Untar chardet to a temp directory: tar -zxvf chardet-2.3.0.tar.gz
+sudo python setup.py install
+
+[Rebuild libjpeg-turbo for i86 Ubuntu]
+svn co svn://svn.code.sf.net/p/libjpeg-turbo/code/trunk libjpeg-turbo
+cd libjpeg-turbo
+autoreconf -fiv
+./configure --with-jpeg8
+make
+sudo make install
+
+[Else for odroid]
+sudo apt-get install libjpeg-dev
+
+[Update cuav/setup.py libjpeg-turbo location for 32-bit]
+elif os.path.exists("/opt/libjpeg-turbo/lib32/libturbojpeg.so"):
+  jpegturbo_libpath = "/opt/libjpeg-turbo/lib32"
+
+[Setup Project]
+git clone git://github.com/jaxiano/cuav
+
+[flycapture.2.6.3.4_armhf for odroid on ARM chip]
+[flycapture2-2.6.3.4-i386 for 32-bit Linux on Intel chip]
+[flycapture2-2.7.3.13-amd64 for 64-bit Linux on Intel chip]
+copy include to: /usr/include/flycapture
+copy include/C to: /usr/include/flycapture/C
+copy lib and lib/C to: /usr/lib
+
+[Compile Project]
+sudo python setup.py build install --user
+
+[Run on Ground-Station box]
+mavproxy.py --master=127.0.0.1:14550 --aircraft=script/jtest --out=10.1.80.97:14550
+
+mavplayback.py --out=192.168.168.203:14550 flight.tlog
+
+geosearch.py --image-width=2448 --image-height=2048 --time-offset=3600 --altitude=100 --minscore=600 --view --mavlog "<flight.log path>" --directory "<JPG/PGM path>"
+
+[Run on odroid]
+mavproxy.py --master=:14550 --aircraft=jtest
+
+################################################################
+[odroid cuav/script/jtest/mavinit.scr]
+################################################################
+set heartbeat 0
+set streamrate -1
+set streamrate2 -1
+set moddebug 1
+module load cuav.modules.camera
+camera airstart
+camera set use_bsend2 1
+camera set bandwidth2 1500
+camera set send2_divider 5
+camera set gcs_address 10.0.107.102
+camera set gcs_view_port 7543
+camera set minscore 500
+camera set minscore2 1200
+camera set bandwidth 130000
+camera set blue_emphasis 1
+camera set height 960
+camera set width 1280
+camera set save_pgm 1
+camera set camparms cuav/data/flea.json
+camera set debug true
+# totally optional to sync clock
+camera set clock_sync true
+# use TERRAIN_REPORT for altitude
+camera set altitude 0
+set moddebug 2
+set distreadout 0
+set altreadout 0
+
+################################################################
+[gcs cuav/script/jtest/mavinit.scr]
+################################################################
+#module load sensors
+set heartbeat 2
+set streamrate -1
+set streamrate2 -1
+set distreadout 500
+set basealt 441
+module load antenna
+module load graph
+graph timespan 60
+set moddebug 2
+#module load console
+module load map
+module load console
+module load cuav.modules.camera
+camera set save_pgm 0
+camera set brightness 2
+#module load cuav.modules.cuav_check
+#camera set gcs_slave 10.1.80.97
+camera set gcs_view_port 7543
+#graph VFR_HUD.airspeed VFR_HUD.groundspeed WIND.speed
+#graph NAV_CONTROLLER_OUTPUT.nav_roll degrees(ATTITUDE.roll)
+wp show cuav/data/way.txt
+camera view
+camera set filter_type compactness
+camera set minscore 835
+camera set use_bsend2 0
+# altitude > 0 is required in order to see thumbs on the map
+camera set altitude 100
+
+################################################################
+[gcs cuav/cuav/data/build_config.json]
+################################################################
+{
+  "camera":"flea"
+}
+
+################################################################
+[gcs cuav/setup.py]
+################################################################
+from distutils.core import Command
+from setuptools import setup, Extension
+import numpy as np
+import os, sys, platform
+import json
+
+version = '1.3.3'
+
+ext_modules = []
+chameleon = None
+flea = None
+
+if platform.system() == 'Windows':
+    extra_compile_args=["-std=gnu99", "-O3"]
+else:
+    if platform.machine().find('arm') != -1:
+        extra_compile_args=["-std=gnu99", "-O3", "-mfpu=neon"]
+    else:
+        extra_compile_args=["-std=gnu99", "-O3"]
+
+scanner = Extension('cuav.image.scanner',
+                    sources = ['cuav/image/scanner.c', 'cuav/image/imageutil.c'],
+		    libraries = ['jpeg'],
+                    extra_compile_args=extra_compile_args)
+ext_modules.append(scanner)
+
+
+def build_config(camera_type):
+   jsonFile = open("cuav/data/build_config.json", "r")
+   data = json.load(jsonFile)
+   jsonFile.close()
+
+   data["camera"] = camera_type
+
+   jsonFile = open("cuav/data/build_config.json", "w+")
+   jsonFile.write(json.dumps(data))
+   jsonFile.close()
+
+def init_chameleon():
+    	chameleon = Extension('cuav.camera.chameleon',
+                          sources = ['cuav/camera/chameleon_py.c',
+                                     'cuav/camera/chameleon.c',
+                                     'cuav/camera/chameleon_util.c'],
+                          libraries = ['dc1394', 'm', 'usb-1.0'],
+                          extra_compile_args=extra_compile_args + ['-O0'])
+    	ext_modules.append(chameleon)
+	
+class Chameleon(Command):
+   user_options=[]
+   def initialize_options(self):
+	pass
+   def finalize_options(self):
+	pass
+   def run(self):
+	build_config("chameleon")
+	init_chameleon()
+
+def init_flea():
+   	flea = Extension('cuav.camera.flea',
+                          sources = ['cuav/camera/flea_py.c',
+                                     'cuav/camera/flea_lib.c'],
+                          libraries = ['flycapture-c'])
+   	ext_modules.append(flea)
+	
+class Flea(Command):
+   user_options=[]
+   def initialize_options(self):
+	pass
+   def finalize_options(self):
+	pass
+   def run(self):
+	build_config("flea")
+	init_flea()
+
+build_config("chameleon")
+init_chameleon()
+
+setup (name = 'cuav',
+        zip_safe=True,
+        version = version,
+        description = 'CanberraUAV UAV code',
+        long_description = '''A set of python libraries and tools developed by CanberraUAV for the Outback Challenge. This includes an image search algorithm with optimisation for ARM processors and a number of mission planning and analysis tools.''',
+        url = 'https://github.com/CanberraUAV/cuav',
+        author = 'CanberraUAV',
+        install_requires = [ 'pymavlink',
+                            'MAVProxy' ],
+        author_email = 'andrew-cuav@tridgell.net',
+        classifiers=['Development Status :: 4 - Beta',
+                    'Environment :: Console',
+                    'Intended Audience :: Science/Research',
+                    'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+                    'Operating System :: OS Independent',
+                    'Programming Language :: Python :: 2.7',
+                    'Topic :: Scientific/Engineering'
+                    ],
+        license='GPLv3',
+        include_dirs = [np.get_include(),
+                       'cuav/camera/include',
+			'cuav/camera/flea/include',
+			'/usr/include/flycapture'],
+        packages = ['cuav', 'cuav.lib', 'cuav.image', 'cuav.camera', 'cuav.uav', 'cuav.modules'],
+        scripts = [ 'cuav/tools/geosearch.py', 'cuav/tools/geotag.py',
+                   'cuav/tools/cuav_lens.py', 'cuav/tools/agl_mission.py',
+                   'cuav/tools/pgm_convert.py',
+                   'cuav/tests/cuav_benchmark.py' ],
+        package_data = { 'cuav' : [ 'tests/test-8bit.pgm',
+                                   'data/chameleon1_arecont0.json',
+				   'data/build_config.json',
+                                   'camera/include/*.h']},
+        ext_modules = ext_modules,
+	cmdclass={
+		'flea':Flea
+	}
+)
+
