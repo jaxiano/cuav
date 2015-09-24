@@ -25,9 +25,11 @@
   a) chmod 777 /root/Falcon/autostart.sh
   b) chmod 777 /root/Falcon/mav_falcon.sh
 
-[Create image directories]
-1. mkdir /data/ids
-2. mkdir /data/tau/ftp
+[Create required directories]
+1. mkdir /data
+2. mkdir /data/logs
+3. mkdir /data/ids
+4. mkdir /data/tau/ftp
   
 [odroid-specific]
 vi ~/.bashrc
@@ -35,22 +37,17 @@ export PATH="/.local/bin/:$PATH"
 export FAKE_CHAMELEON=1
 source ~/.bashrc
 
-mkdir /data
-mkdir /data/logs
-
-[setup git to pull latest from remote repository]
-mkdir /root/cuav
-cd /root/cuav
-git init
-git remote add lenovo_cuav ubuntu@192.168.168.11:/home/ubuntu/workspace/cuav
-git pull lenovo_cuav master
-
-[git error: Cannot pull, git cannot resolve reference ORIG_HEAD]
-remove .git/ORIG_HEAD and redo the pull
 
 [Install project dependencies]
 apt-get install python-wxgtk2.8 python-matplotlib python-opencv python-pip 
 
+[install uEyeSDK-4.61.00-ARM_LINUX_IDS_GNUEABI_HF.tgz on the root]
+tar zxvf uEyeSDK-4.61.00-ARM_LINUX_IDS_GNUEABI_HF.tgz -C /
+
+[Start IDS daemon]
+Successfully installed ueyeethd. Start (as root) with:
+     /etc/init.d/ueyeethdrc start
+ 
 [install libpng]
 cd /to/the/download/directory
 wget http://downloads.sourceforge.net/libpng/libpng-1.6.17.tar.xz
@@ -63,19 +60,47 @@ make
 make install
 export LD_LIBRARY_PATH=/usr/local/libpng-1.6.17/lib:$LD_LIBRARY_PATH
 
-**** the libpng library must be in /etc/lib when run from within screen ****
+**** the libpng library must be in /usr/lib when run from within screen ****
 
-[Install mavproxy/pymavlink]
+[install pyserial]
+cd /home/odroid/Downloads
+tar xf pyserial-2.7.tar.gz
+python setup.py build install
+
+[install pymavlink]
+cd /home/odroid/Downloads
+tar -zxvf pymavlink-1.1.61.tar.gz
+python setup.py build install --user
+
+[setup git to pull latest from remote repository]
+mkdir /root/mavproxy
+cd /root/mavproxy
+git init
+git remote add lenovo_mavproxy ubuntu@192.168.168.11:/home/ubuntu/workspace/mavproxy
+git pull lenovo_mavproxy master
+
+[Install mavproxy]
 git clone git://github.com/tridge/mavproxy.git
 cd mavproxy/
 python setup.py build install --user
 
 [Install cuav]
-**** flycapture.2.6.3.4_armhf ****
+**** flycapture_2.6.3.4_armhf ****
 copy include to: /usr/include/flycapture
 copy include/C to: /usr/include/flycapture/C
 copy lib and lib/C to: /usr/lib
 
+[setup git to pull latest from remote repository]
+mkdir /root/cuav
+cd /root/cuav
+git init
+git remote add lenovo_cuav ubuntu@192.168.168.11:/home/ubuntu/workspace/cuav
+git pull lenovo_cuav master
+
+[git error: Cannot pull, git cannot resolve reference ORIG_HEAD]
+remove .git/ORIG_HEAD and redo the pull
+
+[install cuav]
 git clone git://github.com/tridge/cuav.git
 python setup.py build install --user
 
