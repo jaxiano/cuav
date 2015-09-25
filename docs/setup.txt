@@ -47,15 +47,15 @@ tar zxvf uEyeSDK-4.61.00-ARM_LINUX_IDS_GNUEABI_HF.tgz -C /
 [Start IDS daemon]
 Successfully installed ueyeethd. Start (as root) with:
      /etc/init.d/ueyeethdrc start
+Or, to add it to auto-start on boot:
+     update-rc.d ueyeethdrc defaults
  
 [install libpng]
 cd /to/the/download/directory
 wget http://downloads.sourceforge.net/libpng/libpng-1.6.17.tar.xz
 tar xf libpng-1.6.17.tar.xz
 cd libpng-1.6.17
-./configure --host=arm-linux-gnueabi CC=arm-linux-gnueabihf-gcc \
-    AR=arm-linux-gnueabihf-ar STRIP=arm-linux-gnueabihf-strip RANLIB=arm-linux-gnueabihf-ranlib \
-   --prefix=/usr/local/libpng-1.6.17
+sudo ./configure --host=arm-linux-gnueabi CC=arm-linux-gnueabihf-gcc AR=arm-linux-gnueabihf-ar STRIP=arm-linux-gnueabihf-strip RANLIB=arm-linux-gnueabihf-ranlib --prefix=/usr/local/libpng-1.6.17
 make
 make install
 export LD_LIBRARY_PATH=/usr/local/libpng-1.6.17/lib:$LD_LIBRARY_PATH
@@ -117,14 +117,19 @@ export HOME=/root
 export FAKE_CHAMELEON=1
 mavproxy.py --master=:14550 --aircraft /data
 
-3. crontab -e
-@reboot /usr/bin/nohup /root/Falcon/autostart.sh
+3. [Auto start scripts]
+1. update-rc rc.local defaults
+2. remove rc.local soft links from rc0.d, rc1.d and rc6.d
+3. update rc.local soft links in rc2.d, rc3.d, rc4.d and rc5.d to:
+	ln -s ../init.d/rc.local S99rc.local
 
 ===============================================================================================================================================================
-[IP Table]
+[IP Scanning: nmap -sP 192.168.168.0/24]
 GCS 	- 192.168.168.10
 OGCS	- 192.168.168.11
+M-Radio	- 192.168.168.99 (admin/admin)
 Odroid	- 192.168.168.203
+S-Radio	- 192.168.168.202 (admin/admin)
 Camera	- 192.168.168.204
 
 ===============================================================================================================================================================
