@@ -427,6 +427,19 @@ geosearch.py --image-width=2448 --image-height=2048 --time-offset=3600 --altitud
 [Run on odroid]
 mavproxy.py --master=:14550 --aircraft=jtest
 
+************************************************************************************************************************************************
+*************************** Configure for Windows x64
+************************************************************************************************************************************************
+- Install python-2.7.9.msi or higher as it already comes with PIP
+- Replace the entire site_packages 
+- Install mingw-get-setup.exe
+- Install zlib-1.2.3.exe
+- Install libpng-1.2.37-setup.exe
+- Add to PATH as follows:
+	c:\work\drone\python27;C:\Work\Drone\Python27\Scripts;c:\work\drone\mingw\bin;c:\work\drone\gnuwin32\bin
+- Install PyCharm Community
+- CherryPy-3.8.0.win-amd64.exe
+
 ################################################################
 [odroid cuav/script/jtest/mavinit.scr]
 ################################################################
