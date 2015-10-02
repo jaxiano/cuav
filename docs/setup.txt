@@ -29,7 +29,7 @@
 1. mkdir /data
 2. mkdir /data/logs
 3. mkdir /data/ids
-4. mkdir /data/tau/ftp
+4. mkdir /data/tau/images
   
 [odroid-specific]
 vi ~/.bashrc
@@ -99,6 +99,12 @@ git pull lenovo_cuav master
 
 [git error: Cannot pull, git cannot resolve reference ORIG_HEAD]
 remove .git/ORIG_HEAD and redo the pull
+
+[git error: [remote rejected] master -> master (branch is currently checkout out)]
+- need to config the git directory as 'bare':
+    git config --bool core.bare true
+- to revert back:  
+    git config --bool core.bare false
 
 [install cuav]
 git clone git://github.com/tridge/cuav.git
@@ -341,7 +347,7 @@ export LD_LIBRARY_PATH=/usr/local/libpng-1.6.17/lib:$LD_LIBRARY_PATH
     - local_enable=YES
     - write_enable=YES
     - anon-upload_enable=YES
-    - anon_root=/home/odroid/Downloads/ftp
+    - anon_root=/data
     - anon_mkdir_write_enable=YES
     - use_localtime=YES
     - xferlog_enable=YES
@@ -353,8 +359,8 @@ export LD_LIBRARY_PATH=/usr/local/libpng-1.6.17/lib:$LD_LIBRARY_PATH
     - pam_service_name=vsftpd
     - rsa_cert_file=/etc/ssl/certs/ssl-cert-snakeoil.pem
     - rsa_private_key_file=/etc/ssl/private/ssl-cert-snakeoil.key
-  - the anonymous ftp root directory should be owned by odroid:odroid
-  - uploaded files must be dropped into a child directory with world permission:
+  - the anonymous ftp root directory (/data) should be owned by odroid:odroid
+  - uploaded files must be dropped into a child directory (/data/tau/images) with world permission:
     - mkdir images
     - chmod 777 images
   - sudo restart vsftpd
