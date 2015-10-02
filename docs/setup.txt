@@ -100,6 +100,12 @@ git pull lenovo_cuav master
 [git error: Cannot pull, git cannot resolve reference ORIG_HEAD]
 remove .git/ORIG_HEAD and redo the pull
 
+[git error: [remote rejected] master -> master (branch is currently checkout out)]
+- need to config the git directory as 'bare':
+    git config --bool core.bare true
+- to revert back:  
+    git config --bool core.bare false
+
 [install cuav]
 git clone git://github.com/tridge/cuav.git
 python setup.py build install --user
