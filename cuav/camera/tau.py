@@ -21,9 +21,9 @@ except ImportError:
 error = scanner.error
 config_file = 'cuav/data/tau.json'
 
-raw_png = 'tau/images/raw'
-raw_ftp_base_path = '/data/'
-raw_png_search_path = raw_ftp_base_path + raw_png + '*'
+raw_png = 'images/raw'
+raw_png_base_path = '/dev/Downloads/ftp/'
+raw_png_search_path = raw_png_base_path + raw_png + '*'
 frame_counter = 0
 trigger_time = 0
 frame_rate = 7.5
@@ -31,8 +31,8 @@ last_frame_time = 0
 image_height = 480
 image_width = 640
 continuous_mode = False
-tau_ip = '192.168.168.204'
-odroid_ip = '192.168.168.203'
+tau_ip = '10.0.107.56'
+odroid_ip = '10.0.107.90'
 
 def load_camera_settings():
 	global image_height, image_width
