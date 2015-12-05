@@ -20,7 +20,11 @@
   b) sudo apt-get upgrade
 
 [Auto start rc.local]
-1. /etc/rc.local is called by /etc/init.d/rc.local
+1. /etc/rc.local is called by /etc/init.d/rc.local:
+  a) vi /etc/rc.local:
+	/usr/bin/nohup /root/Falcon/autostart.sh &
+	exit 0
+
 2. make sure all scripts called by /etc/rc.local are executable
   a) chmod 777 /root/Falcon/autostart.sh
   b) chmod 777 /root/Falcon/mav_falcon.sh
@@ -39,7 +43,7 @@ source ~/.bashrc
 
 
 [Install project dependencies]
-apt-get install python-wxgtk2.8 python-matplotlib python-opencv python-pip 
+apt-get install python-wxgtk2.8 python-matplotlib python-opencv python-pip python-dev libjpeg-dev screen
 
 [install uEyeSDK-4.61.00-ARM_LINUX_IDS_GNUEABI_HF.tgz on the root]
 tar zxvf uEyeSDK-4.61.00-ARM_LINUX_IDS_GNUEABI_HF.tgz -C /
@@ -62,6 +66,10 @@ export LD_LIBRARY_PATH=/usr/local/libpng-1.6.17/lib:$LD_LIBRARY_PATH
 
 **** the libpng library must be in /usr/lib when run from within screen ****
 
+**** On desktop Ubuntu, the default libpng in /usr/include reference libpng12. Make sure to use libpng16 as it fixes setjmp.h problem ****
+
+**** to copy soft links, use the cp -a option ****
+
 [install pyserial]
 cd /home/odroid/Downloads
 tar xf pyserial-2.7.tar.gz
@@ -83,6 +91,9 @@ git pull lenovo_mavproxy master
 git clone git://github.com/tridge/mavproxy.git
 cd mavproxy/
 python setup.py build install --user
+
+**** if setuptools is not installed... ****
+wget https://bootstrap.pypa.io/ez_setup.py -O - | sudo python
 
 [Install cuav]
 **** flycapture_2.6.3.4_armhf ****
@@ -107,7 +118,7 @@ remove .git/ORIG_HEAD and redo the pull
     git config --bool core.bare false
 
 [install cuav]
-git clone git://github.com/tridge/cuav.git
+git clone git://github.com/jaxiano/cuav
 python setup.py build install --user
 
 [run mavproxy on boot]
@@ -126,7 +137,7 @@ mavproxy.py --master=:14550 --aircraft /data
 3. [Auto start scripts]
 1. update-rc rc.local defaults
 2. remove rc.local soft links from rc0.d, rc1.d and rc6.d
-3. update rc.local soft links in rc2.d, rc3.d, rc4.d and rc5.d to:
+3. update rc.local soft links in /etc/ rc2.d, rc3.d, rc4.d and rc5.d to:
 	ln -s ../init.d/rc.local S99rc.local
 
 ===============================================================================================================================================================
@@ -235,6 +246,10 @@ sudo ./configure
 sudo make -j3
 sudo make install
 sudo make check
+
+sudo mkdir /usr/lib/python2.7/dist-packages/reportlab/fonts
+sudo chown johnchu:johnchu /usr/lib/python2.7/dist-packages/reportlab/fonts
+Open pfbfer.zip and copy the fonts to the newly created .../reportlab/fonts directory
 
 ******************** Easy way to install PyCharm ************************
 *** http://www.sysads.co.uk/2014/06/install-pycharm-3-4-ubuntu-14-04/ ***
