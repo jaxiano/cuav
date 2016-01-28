@@ -245,6 +245,8 @@ class CameraModule(mp_module.MPModule):
               MPSetting('MaxRarityPct',  float, 0.02, range=(0,100), increment=0.01, digits=2),
               MPSetting('RegionMergeSize', float, 1.0, range=(0,100), increment=0.1, digits=1),
               MPSetting('SaveIntermediate', bool, 0),
+	      MPSetting('RealTime', int, 1),
+	      MPSetting('AdaptiveScoring', int, 1),
 	      MPSetting('Severity', int, 1)
               ],
             title='Image Settings')
