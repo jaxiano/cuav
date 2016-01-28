@@ -229,6 +229,14 @@ sudo pip install PyDispatcher
 
 *** install pycharm ***
 http://linuxg.net/how-to-install-pycharm-3-4-on-ubuntu-14-04-linux-mint-17-pinguy-os-14-04-and-other-ubuntu-14-04-derivatives/
+
+*** Resize Disk Partition ***
+1. Resize in VMWare
+2. Boot Linux and run: sudo gparted
+3. Delete linux-swap and extended partitions
+4. Resize the new partition while reserving 1GB for swap
+5. Create swap and linux-swap partitions
+6. Accept changes
 ***********************
 
 ************************* Install libavg **********************************
@@ -447,6 +455,18 @@ geosearch.py --image-width=2448 --image-height=2048 --time-offset=3600 --altitud
 
 [Run on odroid]
 mavproxy.py --master=:14550 --aircraft=jtest
+
+[overflow /tmp]
+This happens because the VM ran out of space and Linux creates a temporary space in RAM called overflow.
+- sudo umount -l /tmp
+- To reallocate more space to partition, run: sudo gparted 
+- sudo mount -o bind /var/tmp /tmp
+
+[IPython Notebook]
+- download Anaconda at: https://www.continuum.io/downloads
+- to install Anaconda: bash Anaconda2-2.4.1-Linux-x86_64.sh
+- to install jupyter: conda install jupyter
+- to install opencv: conda install opencv
 
 ################################################################
 [odroid cuav/script/jtest/mavinit.scr]
