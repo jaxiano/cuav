@@ -77,7 +77,12 @@ python setup.py build install
 
 [install pymavlink]
 cd /home/odroid/Downloads
-tar -zxvf pymavlink-1.1.61.tar.gz
+tar -zxvf pymavlink-1.1.37.tar.gz
+python setup.py build install --user
+
+[install mavproxy]
+cd /home/odroid/Downloads
+tar -zxvf MAVProxy-1.3.13.tar.gz
 python setup.py build install --user
 
 [setup git to pull latest from remote repository]
@@ -144,10 +149,17 @@ mavproxy.py --master=:14550 --aircraft /data
 [IP Scanning: nmap -sP 192.168.168.0/24]
 GCS 	- 192.168.168.10
 OGCS	- 192.168.168.11
-M-Radio	- 192.168.168.99 (admin/admin)
+OGCS-Radio	- 192.168.168.99 (admin/admin)
+OUAV-Radio  - 192.168.168.100 (admin/admin)
 Odroid	- 192.168.168.203
-S-Radio	- 192.168.168.202 (admin/admin)
 Camera	- 192.168.168.204
+
+===============================================================================================================================================================
+[Configure MicroHard]
+1. Open a serial console @ 115200,n,8,1,none
+2. login: admin/admin
+3. to get current ip: at+mleip?
+4. to set ip: at+mleip=192.168.168.99,255.255.255.0,192.168.168.99
 
 ===============================================================================================================================================================
 [Create VLan]
@@ -159,6 +171,19 @@ sudo ifconfig eth0.# xxx.xxx.xxx.xxx
 Example:
 sudo vconfig add eth0 2
 sudo ifconfig eth0.2 192.168.168.11
+
+===============================================================================================================================================================
+[Setup Tau/Sightline camera]
+1. Sightline board defaults to 169.254.1.x/255.255.0.0
+2. Configure PC with IP 169.254.1.11/255.255.0.0
+3. Run Sightline Plus application (windows)
+4. From the "Connect" tab, select the "SLA1500_XX, 169.254.1.xx" port
+5. Select the "Let me set it up" option and click on the "Connect to board" button
+6. Once loaded, select the "Advanced" button
+7. Set the static IP to: 192.168.168.204/255.255.255.0/192.168.168.1
+8. Set telemetry destination to: 192.168.168.11
+9. Parameters/Save
+10. Reset/Board
 
 ===============================================================================================================================================================
 [Setup IDS camera]
@@ -347,7 +372,7 @@ export LD_LIBRARY_PATH=/usr/local/libpng-1.6.17/lib:$LD_LIBRARY_PATH
     - password: docker5323
     - email: johnchu@hotmail.com
 - sudo docker run -it -v ~/Downloads:/dev/Downloads --privileged --name="armhf-mavproxy" --net="host" johnchu/armhf-mavproxy:cuav-flea /bin/bash
-- Be sure to use Mavproxy 1.3.13 and Pymavlink 1.1.36
+- Be sure to use Mavproxy 1.3.13 and Pymavlink 1.1.37
 - Benign error: ImportError: No module named mavproxy_cuav.modules.camera
 - Be ~/.tilecache directory is non-root
 - apt-get update lists are stored in: /etc/apt/sources.list.d
@@ -414,7 +439,8 @@ export LD_LIBRARY_PATH=/usr/local/libpng-1.6.17/lib:$LD_LIBRARY_PATH
 
 [Upgrade default chardet to latest, in this case the latest is v2.3.0]
 Download chardet from: https://pypi.python.org/pypi/chardet
-or wget https://pypi.python.org/packages/source/c/chardet/chardet-2.3.0.tar.gz
+or wget https://pypi.python.org/packages/source/c/chardet/chardet-2.3.0.tar
+
 Untar chardet to a temp directory: tar -zxvf chardet-2.3.0.tar.gz
 sudo python setup.py install
 
