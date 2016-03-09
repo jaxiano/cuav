@@ -25,7 +25,7 @@ Alternatively, use Win32DiskImager v2. "Write" the img to eMMC.
   a) git clone https://github.com/jaxiano/cuav.git
 
 7. Install project dependencies
-  a) apt-get install python-wxgtk2.8 python-matplotlib python-opencv python-pip python-dev libjpeg-dev screen
+  a) apt-get install python-wxgtk2.8 python-matplotlib python-opencv python-pip python-dev libjpeg-dev screen vsftpd
 
 8. install libpng:
   a) cd /to/the/download/directory
@@ -59,6 +59,11 @@ Alternatively, use Win32DiskImager v2. "Write" the img to eMMC.
   c) python setup.py build install
 
 12. install cuav
+  **** flycapture_2.6.3.4_armhf ****
+  copy include to: /usr/include/flycapture
+  copy include/C to: /usr/include/flycapture/C
+  copy lib and lib/C to: /usr/lib
+
   a) cd /path/to/cuav
   b) flea camera: python setup.py build install
   c) tau camera: python setup.py tau build install
@@ -168,12 +173,6 @@ python setup.py build install --user
 
 **** if setuptools is not installed... ****
 wget https://bootstrap.pypa.io/ez_setup.py -O - | sudo python
-
-[Install cuav]
-**** flycapture_2.6.3.4_armhf ****
-copy include to: /usr/include/flycapture
-copy include/C to: /usr/include/flycapture/C
-copy lib and lib/C to: /usr/lib
 
 [setup git to pull latest from remote repository]
 mkdir /root/cuav
