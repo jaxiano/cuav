@@ -70,7 +70,7 @@ def capture(h, timeout):
 		if bgr is None:
 			print 'flea::capture Rats...'
 		print 'flea::capture Returning bgr'
-	return frame_time, frame_counter, shutter, bgr, bgr
+	return frame_time, frame_counter, shutter, bgr, numpy.copy(bgr)
 	
 def convertRawToBGR(raw):
 	global image_width, image_height

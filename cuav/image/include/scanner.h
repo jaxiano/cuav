@@ -87,7 +87,11 @@ static const struct scan_params scan_params_640_480 = {
 struct regions {
         uint16_t height;
         uint16_t width;
+        uint16_t avg_pixel;
 	unsigned num_regions;
+	uint16_t region_avg_pixel[MAX_REGIONS];
+	float region_rarity[MAX_REGIONS];
+	float region_fg_rarity[MAX_REGIONS];
 	uint32_t region_size[MAX_REGIONS];
 	struct region_bounds {
 		uint16_t minx, miny;

@@ -143,12 +143,12 @@ class GetImageSettingBundle:
 
 class ChangeAutoSettings:
     def __init__(self, settings):
-	self.settings = settings
+        self.settings = settings
 
 class GetAutoSettings:
     def __init__(self):
-	'''request current auto settings'''
-	pass
+        '''request current auto settings'''
+        pass
 
 
 class BlockCancel:
@@ -175,12 +175,12 @@ class CameraModule(mp_module.MPModule):
         self.flying = True
         self.terrain_alt = None
         self.last_camparms = None
-	##keep thses separate from cameraparams until sure they are equivalent to xresolution and yresolution
+        ##keep thses separate from cameraparams until sure they are equivalent to xresolution and yresolution
         # prevent loopback of messages
         for mtype in ['DATA16', 'DATA32', 'DATA64', 'DATA96']:
             self.module('link').no_fwd_types.add(mtype)
 
-	print 'Loading Default MPSettings'
+        print 'Loading Default MPSettings'
         from MAVProxy.modules.lib.mp_settings import MPSettings, MPSetting
         self.camera_settings = MPSettings(
             [ MPSetting('depth', int, 8, 'Image Depth'),
@@ -245,10 +245,10 @@ class CameraModule(mp_module.MPModule):
               MPSetting('MaxRarityPct',  float, 0.02, range=(0,100), increment=0.01, digits=2),
               MPSetting('RegionMergeSize', float, 1.0, range=(0,100), increment=0.1, digits=1),
               MPSetting('SaveIntermediate', bool, 0),
-	      MPSetting('RealTime', int, 1),
-	      MPSetting('AdaptiveScoring', int, 1),
-	      MPSetting('Severity', int, 1)
-              ],
+              MPSetting('RealTime', int, 1),
+              MPSetting('AdaptiveScoring', int, 1),
+              MPSetting('Severity', int, 1)
+            ],
             title='Image Settings')
 
         self.capture_count = 0
@@ -294,9 +294,9 @@ class CameraModule(mp_module.MPModule):
         self.last_heartbeat = time.time()
         self.last_heartbeat2 = time.time()
 	
-	self.last_image_saved = None
-	self.new_auto_settings = None       
-	self.auto_settings = None
+        self.last_image_saved = None
+        self.new_auto_settings = None
+        self.auto_settings = None
  
         # setup directory for images
         if self.logdir is None:
@@ -396,10 +396,10 @@ class CameraModule(mp_module.MPModule):
 	
             ##Getting initial camera settings for clients	
             h = sensor.open(1, self.camera_settings.depth, self.camera_settings.capture_brightness, self.camera_settings.height, self.camera_settings.width)
-	    self.camera_settings.height, self.camera_settings.width = sensor.get_resolution()
-	    self.auto_settings = self.get_auto_settings(h)
-	    print 'airstart'
-	    self.print_auto_settings(self.auto_settings)
+            self.camera_settings.height, self.camera_settings.width = sensor.get_resolution()
+            self.auto_settings = self.get_auto_settings(h)
+            print 'airstart'
+            self.print_auto_settings(self.auto_settings)
             time.sleep(0.1)
             sensor.close(h)
 
@@ -423,7 +423,7 @@ class CameraModule(mp_module.MPModule):
         print('Opening camera')
         time.sleep(0.5)
         h = sensor.open(1, self.camera_settings.depth, self.camera_settings.capture_brightness, self.camera_settings.height, self.camera_settings.width)
-	self.camera_settings.height, self.camera_settings.width = sensor.get_resolution()
+        self.camera_settings.height, self.camera_settings.width = sensor.get_resolution()
 
         print('Getting camera base_time')
         while frame_time is None:
@@ -442,11 +442,13 @@ class CameraModule(mp_module.MPModule):
                 sensor.close(h)
                 time.sleep(0.5)
                 h = sensor.open(1, self.camera_settings.depth, self.camera_settings.capture_brightness, self.camera_settings.height, self.camera_settings.width)
-	        self.camera_settings.height, self.camera_settings.width = sensor.get_resolution()
-	self.auto_settings = self.get_auto_settings(h)
-	print 'get_base_time'
-	self.print_auto_settings(self.auto_settings)
+
+        self.camera_settings.height, self.camera_settings.width = sensor.get_resolution()
+        self.auto_settings = self.get_auto_settings(h)
+        print 'get_base_time'
+        self.print_auto_settings(self.auto_settings)
         print('base_time=%f' % base_time)
+
         return h, base_time, frame_time
 
     def check_camera_parms(self):
@@ -497,11 +499,12 @@ class CameraModule(mp_module.MPModule):
 
                 if h is None:
                     h, base_time, last_frame_time = self.get_base_time()
-		    if h is None:
-			print "camera::capture_thread Rats... h is None!"
-                    last_capture_frame_time = last_frame_time
-                    # put into continuous mode
-                    sensor.trigger(h, True)
+                    if h is None:
+                        print "camera::capture_thread Rats... h is None!"
+
+                last_capture_frame_time = last_frame_time
+                # put into continuous mode
+                sensor.trigger(h, True)
 
                 #if self.camera_settings.depth == 16:
                 #    im = numpy.zeros((self.camera_settings.height, self.camera_settings.width),dtype='uint16')
@@ -515,26 +518,27 @@ class CameraModule(mp_module.MPModule):
                     sensor.set_framerate(h, int(self.camera_settings.framerate))
                     last_framerate = int(self.camera_settings.framerate)
 
-	        if self.new_auto_settings is not None:
+                if self.new_auto_settings is not None:
                     obj = self.new_auto_settings
-		    sensor.set_auto_exposure(h, self.bool_to_int(obj['exposure']['auto']), self.bool_to_int(obj['exposure']['on']), float(obj['exposure']['value']))
-	            sensor.set_auto_shutter(h, self.bool_to_int(obj['shutter']['auto']), self.bool_to_int(obj['shutter']['on']), float(obj['shutter']['value']))
-	            sensor.set_auto_gain(h, obj['gain']['auto'], obj['gain']['on'], float(obj['gain']['value']))
-		    sensor.set_brightness(h, float(obj['brightness']));
-		    sensor.set_gamma(h, float(obj['gamma']));
+                    sensor.set_auto_exposure(h, self.bool_to_int(obj['exposure']['auto']), self.bool_to_int(obj['exposure']['on']), float(obj['exposure']['value']))
+                    sensor.set_auto_shutter(h, self.bool_to_int(obj['shutter']['auto']), self.bool_to_int(obj['shutter']['on']), float(obj['shutter']['value']))
+                    sensor.set_auto_gain(h, obj['gain']['auto'], obj['gain']['on'], float(obj['gain']['value']))
+                    sensor.set_brightness(h, float(obj['brightness']))
+                    sensor.set_gamma(h, float(obj['gamma']))
                     self.new_auto_settings = None 
-		    self.auto_settings = self.get_auto_settings(h)  
-		    print 'set new settings'
-		    self.print_auto_settings(self.auto_settings)
+                    self.auto_settings = self.get_auto_settings(h)
+                    print 'set new settings'
+                    self.print_auto_settings(self.auto_settings)
+
                 self.check_camera_parms()
 
                 capture_time = time.time()
                 
                 # capture an image
                 frame_time, frame_counter, shutter, bgr, raw = sensor.capture(h, 1000)
-		self.camera_settings.height = bgr.shape[0]
-		self.camera_settings.width = bgr.shape[1]
-		#self.camera_settings.depth = bgr.shape[2]
+                self.camera_settings.height = bgr.shape[0]
+                self.camera_settings.width = bgr.shape[1]
+                #self.camera_settings.depth = bgr.shape[2]
 
                 if frame_time < last_capture_frame_time:
                     base_time += 128
@@ -573,8 +577,8 @@ class CameraModule(mp_module.MPModule):
                     self.framerate = 1.0 / (frame_time - last_frame_time)
                 last_frame_time = frame_time
                 last_frame_counter = frame_counter
-		print "capture_count:%i, fps:%f, last_frame_time:%i, last_frame_counter:%i" % (self.capture_count,self.fps,last_frame_time,last_frame_counter)
-		time.sleep(1)
+                print "capture_count:%i, fps:%f, last_frame_time:%i, last_frame_counter:%i" % (self.capture_count,self.fps,last_frame_time,last_frame_counter)
+                time.sleep(1)
             except sensor.error, msg:
                 print("Exception in capture thread: {0} ".format(msg))
                 self.error_count += 1
@@ -583,7 +587,7 @@ class CameraModule(mp_module.MPModule):
             sensor.close(h)
 
     def bool_to_int(self, b):
-	return 1 if b else 0
+        return 1 if b else 0
 
     def save_thread(self):
         '''image save thread'''
@@ -600,7 +604,7 @@ class CameraModule(mp_module.MPModule):
             if self.camera_settings.save_pgm != 0: # and self.flying:
                 if frame_count % self.camera_settings.save_pgm == 0:
                     sensor.save_pgm('%s/%s.png' % (raw_dir, rawname), raw)
-		    self.last_image_saved = rawname
+            self.last_image_saved = rawname
 
     def scan_thread(self):
         '''image scanning thread'''
@@ -640,12 +644,12 @@ class CameraModule(mp_module.MPModule):
 	    #scanner.png_raw_to_bgr(im_full, filename)
 	    #im_full = bgr
 
-            regions = scanner.scan_python(bgr,'script/gtest/', scan_parms)
+            rlist = scanner.scan_python(bgr,'script/gtest/', scan_parms)
             if self.camera_settings.filter_type=='compactness':
                 calculate_compactness = True
             else:
                 calculate_compactness = False
-            regions = cuav_region.RegionsConvert(regions,
+            regions = cuav_region.RegionsConvert(rlist,
                                                  cuav_util.image_shape(bgr),
                                                  cuav_util.image_shape(bgr),
                                                  calculate_compactness)
@@ -656,60 +660,18 @@ class CameraModule(mp_module.MPModule):
             regions = cuav_region.filter_regions(bgr, regions,
                                                  min_score=min(self.camera_settings.minscore,self.camera_settings.minscore2),
                                                  filter_type=self.camera_settings.filter_type)
-	    self.analyzeRegions(bgr, regions)
+            cuav_region.PruneRegionsBySpectra(regions, bgr)
+            cuav_region.PruneRegionsByDupe(regions)
+            cuav_region.PruneRegionsByProximity(regions)
+
+            regions = cuav_region.GetActiveRegions(regions)
+
+            if self.image_settings.Severity:
+                cuav_region.DrawRegions(regions, bgr)
 
             self.region_count += len(regions)
             if self.transmit_queue.qsize() < 100:
                 self.transmit_queue.put((frame_time, regions, bgr, None))
-
-    def analyzeRegions(self, bgr, regions):
-	mat = cv.GetMat(cv.fromarray(bgr))
-	bits = 4
-	for aregion in regions:
-		(minx,miny,maxx,maxy) = aregion.tuple()
-		hist_r = {}
-		hist_g = {}
-		hist_b = {}
-		hist = {}
-		for x in range(minx,maxx-1,1):
-		   for y in range(miny,maxy-1,1):
-			(b,g,r) = mat[y,x]
-			value = r/(1<<bits)
-			count = 0 if not hist_r.has_key(value) else hist_r[value]
-			count += 1
-			hist_r[value]=count
-
-			value = g/(1<<bits)
-			count = 0 if not hist_g.has_key(value) else hist_g[value]
-			count += 1
-			hist_g[value] = count
-
-			value = b/(1<<bits)
-			count = 0 if not hist_b.has_key(value) else hist_b[value]
-			count += 1
-			hist_b[value] = count
-		
-		hist['r'] = hist_r
-		hist['g'] = hist_g
-		hist['b'] = hist_b
-
-		severity = self.evaluateHistogram(hist)
-		color = (0,0,255) if self.image_settings.Severity==0 else severity
-		aregion.draw_rectangle(mat,colour=color)
-
-    def evaluateHistogram(self, hist):
-	rlen = len(hist['r'])
-	glen = len(hist['g'])
-	blen = len(hist['b'])
-	if (rlen+blen+glen >= 35) or \
-	   (rlen == 16 and blen >= 7) or \
-	   (rlen >= 15 and blen >= 10) or \
-	   (rlen >= 13 and blen >= 11 and glen >= 11):
-	      return (255,0,0)
-	elif rlen >= 8 and blen >= 8:
-	      return (255,255,0)
-	else:
-	      return (0,0,255)
 
     def get_plane_position(self, frame_time,roll=None):
         '''get a MavPosition object for the planes position if possible'''
@@ -825,7 +787,7 @@ class CameraModule(mp_module.MPModule):
             jpeg = None
 
             if len(regions) > 0:
-	        reg_count += 1
+                reg_count += 1
                 lowscore = 0
                 highscore = 0
                 for r in regions:
@@ -846,10 +808,10 @@ class CameraModule(mp_module.MPModule):
 
                     blk_cancel = BlockCancel(None)
 
-		    print('send1: {0} highscore: {1} minscore: {2}'.format(self.camera_settings.send1, highscore, self.camera_settings.minscore))
+                    print('send1: {0} highscore: {1} minscore: {2}'.format(self.camera_settings.send1, highscore, self.camera_settings.minscore))
                     if self.camera_settings.send1 and highscore >= self.camera_settings.minscore:
                         # send on primary link
-		        print('send1: {0} highscore: {1} minscore: {2}'.format(self.camera_settings.send1, highscore, self.camera_settings.minscore))
+    		        print('send1: {0} highscore: {1} minscore: {2}'.format(self.camera_settings.send1, highscore, self.camera_settings.minscore))
                         self.bsend.set_bandwidth(self.camera_settings.bandwidth)
                         self.bsend.set_packet_loss(self.camera_settings.packet_loss)
                         self.bsend.send(buf, priority=highscore, callback=functools.partial(self.send_complete, blk_cancel))
@@ -941,7 +903,7 @@ class CameraModule(mp_module.MPModule):
     def start_aircraft_bsend(self):
         '''start bsend for aircraft side'''
         if self.bsend is None:
-	    print('initializing bsend')
+            print('initializing bsend')
             self.bsend = block_xmit.BlockSender(self.camera_settings.aircraft_port,
                                                 bandwidth=self.camera_settings.bandwidth, debug=False,
                                                 dest_ip=self.camera_settings.gcs_address,
@@ -1247,14 +1209,14 @@ class CameraModule(mp_module.MPModule):
 
         if isinstance(obj, ChangeAutoSettings):
             self.new_auto_settings = obj.settings
-	    self.print_auto_settings(self.new_auto_settings)
+            self.print_auto_settings(self.new_auto_settings)
             pkt = CommandResponse(buf)
             buf = cPickle.dumps(pkt, cPickle.HIGHEST_PROTOCOL)
             bsend.send(buf, priority=1000)
 
         if isinstance(obj, GetAutoSettings):
-	    print 'GetAutoSettings'
-	    self.print_auto_settings(self.auto_settings)
+            print 'GetAutoSettings'
+            self.print_auto_settings(self.auto_settings)
             pkt = ChangeAutoSettings(self.auto_settings)
             buf = cPickle.dumps(pkt, cPickle.HIGHEST_PROTOCOL)
             bsend.send(buf, priority=10000)
@@ -1362,11 +1324,11 @@ class CameraModule(mp_module.MPModule):
     def handle_image_request(self, obj, bsend):
         '''handle ImageRequest from GCS'''
         print 'image request for frame time: {0}'.format(obj.frame_time)
-	if obj.frame_time != 0:
-	    rawname = "raw%s" % cuav_util.frame_time(obj.frame_time)
-	else:
-	    rawname = self.last_image_saved
-	    obj.frame_time = cuav_util.parse_frame_time(rawname)
+        if obj.frame_time != 0:
+            rawname = "raw%s" % cuav_util.frame_time(obj.frame_time)
+        else:
+            rawname = self.last_image_saved
+            obj.frame_time = cuav_util.parse_frame_time(rawname)
 	
         raw_dir = os.path.join(self.camera_dir, "raw")
         filename = '%s/%s.png' % (raw_dir, rawname)
@@ -1374,8 +1336,8 @@ class CameraModule(mp_module.MPModule):
             print("No file: %s" % filename)
             return
         try:
-	    print 'handle_image_request: %s' % filename
-	    img = sensor.load_image(filename)
+            print 'handle_image_request: %s' % filename
+            img = sensor.load_image(filename)
         except Exception:
             return
         if not obj.fullres:

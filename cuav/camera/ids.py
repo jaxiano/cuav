@@ -77,7 +77,7 @@ def capture(h, timeout):
     frame_counter += 1
     trigger_time = time.time()
     print 'mock_ids::capture returning data'
-    return trigger_time, frame_counter, 0, bgr, bgr
+    return trigger_time, frame_counter, 0, bgr, numpy.copy(bgr)
 
 def close(h):
 	ids.close()

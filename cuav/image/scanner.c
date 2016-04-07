@@ -26,6 +26,16 @@ static double end_timer()
 #endif // SHOW_TIMING
 
 /*
+  calculate a histogram bin for a bgr value
+ */
+static inline uint16_t bgr_bin(const struct bgr *in)
+{
+	return (in->r << (2*HISTOGRAM_BITS_PER_COLOR)) |
+		(in->g << (HISTOGRAM_BITS_PER_COLOR)) |
+		in->b;
+}
+
+/*
   save a bgr image as a P6 pnm file
  */
 static bool colour_save_pnm(const char *filename, const struct bgr_image *image)
@@ -304,7 +314,7 @@ static void get_min_max(const struct bgr * __restrict in,
 /*
   quantise an BGR image
  */
-static void quantise_image(const struct scan_params *scan_params, 
+static uint16_t quantise_image(const struct scan_params *scan_params,
                            const struct bgr *in,
 			   uint32_t size,
 			   struct bgr *out,
@@ -312,7 +322,10 @@ static void quantise_image(const struct scan_params *scan_params,
 			   const struct bgr *bin_spacing)
 {
 	unsigned i;
+	uint32_t r_count, g_count, b_count;
 	uint8_t btab[0x100], gtab[0x100], rtab[0x100];
+
+	r_count = g_count = b_count = 0;
 
 	for (i=0; i<0x100; i++) {
 		btab[i] = (i - min->b) / bin_spacing->b;
@@ -341,9 +354,15 @@ static void quantise_image(const struct scan_params *scan_params,
 			}
 		}
 		out[i].b = btab[in[i].b];
+		b_count += out[i].b;
 		out[i].g = gtab[in[i].g];
+		g_count += out[i].g;
 		out[i].r = rtab[in[i].r];
+		r_count += out[i].r;
 	}
+	struct bgr avg = { .b=b_count/size, .g=g_count/size, .r=r_count/size };
+
+	return bgr_bin(&avg);
 }
 
 static bool is_zero_bgr(const struct bgr *v)
@@ -377,16 +396,6 @@ static void unquantise_image(const struct bgr_image *in,
 		}
 	}
 
-}
-
-/*
-  calculate a histogram bin for a bgr value
- */
-static inline uint16_t bgr_bin(const struct bgr *in)
-{
-	return (in->r << (2*HISTOGRAM_BITS_PER_COLOR)) |
-		(in->g << (HISTOGRAM_BITS_PER_COLOR)) |
-		in->b;
 }
 
 /*
@@ -535,7 +544,7 @@ static void histogram_neighbors(const struct scan_params *scan_params,
 	free(neighbours);
 }
 
-static void histogram_quantization(const struct scan_params *scan_params,
+static uint16_t histogram_quantization(const struct scan_params *scan_params,
                              const struct bgr_image *in,
                              struct bgr_image *quantised,
                              struct histogram *histogram,
@@ -590,7 +599,7 @@ static void histogram_quantization(const struct scan_params *scan_params,
 	}
 
 	printf("quantize image\n");
-	quantise_image(scan_params, &in->data[0][0], in->width*in->height, 
+	uint16_t avg_pixel = quantise_image(scan_params, &in->data[0][0], in->width*in->height,
                        &quantised->data[0][0], &min, &bin_spacing);
 
 /*	if (scan_params->save_intermediate) {
@@ -614,6 +623,8 @@ static void histogram_quantization(const struct scan_params *scan_params,
 			colour_save_pnm(filepath, unquantised);
 			copy_bgr_image8(qsaved, quantised);
 	}*/
+
+	return avg_pixel;
 }
 
 static void colour_histogram(const struct scan_params *scan_params,
@@ -904,33 +915,62 @@ static float score_one_region(const struct scan_params *scan_params,
                               const struct region_bounds *bounds, 
                               const struct bgr_image *quantised,
                               const struct histogram *histogram,
-                              PyArrayObject **pixel_scores)
+                              PyArrayObject **pixel_scores,
+                              uint16_t *region_avg_pixel,
+                              float *region_rarity,
+                              float *region_fg_rarity,
+                              uint16_t avg_pixel)
 {
         float score = 0;
         uint16_t count = 0;
         uint16_t width, height;
+
+        uint32_t r_count=0, g_count=0, b_count=0;
+        uint32_t rgb_count = 0;
+        uint32_t total_pixels = 0;
+        uint32_t fg_pixels = 0;
+
         width  = 1 + bounds->maxx - bounds->minx;
         height = 1 + bounds->maxy - bounds->miny;
         int dims[2] = { height, width };
 //        (*pixel_scores) = (PyArrayObject *)PyArray_FromDims(2, dims, NPY_INT);
         for (uint16_t y=bounds->miny; y<=bounds->maxy; y++) {
                 for (uint16_t x=bounds->minx; x<=bounds->maxx; x++) {
-			const struct bgr *v = &quantised->data[y][x];                        
-			uint16_t b = bgr_bin(v);
+                    const struct bgr *v = &quantised->data[y][x];
+                    uint16_t pixel = bgr_bin(v);
+
+                    total_pixels++;
+                    fg_pixels += abs((float)(avg_pixel-pixel)/avg_pixel);
+
 //                        double *scorep = PyArray_GETPTR2(*pixel_scores, y-bounds->miny, x-bounds->minx);
-                        if (histogram->count[b] >= scan_params->histogram_count_threshold) {
+                        if (histogram->count[pixel] >= scan_params->histogram_count_threshold) {
 //                                *scorep = 0;
                                 continue;
                         }
-                        uint32_t diff = (scan_params->histogram_count_threshold - histogram->count[b]);
+                        uint32_t diff = (scan_params->histogram_count_threshold - histogram->count[pixel]);
                         count++;
                         score += diff;
+
+                        r_count += v->r;
+                        g_count += v->g;
+                        b_count += v->b;
+                        rgb_count += 1;
+
 //                        *scorep = diff;
                 }
         }
         if (count == 0) {
-                return 0;
+            return 0;
         }
+
+        r_count /= rgb_count;
+        g_count /= rgb_count;
+        b_count /= rgb_count;
+        struct bgr avg = {.r=r_count/rgb_count, .g=g_count/rgb_count, .b=b_count/rgb_count};
+        *region_avg_pixel = bgr_bin(&avg);
+        *region_rarity = ((float)(fg_pixels)/total_pixels)*100;
+        *region_fg_rarity= ((float)(abs(avg_pixel - *region_avg_pixel))/avg_pixel) * 100;
+
         return MIN(1000.0, 1000.0 * score / (count * scan_params->histogram_count_threshold));
 }
 
@@ -947,8 +987,15 @@ static void score_regions(const struct scan_params *scan_params,
 	unsigned i;
 	for (i=0; i<in->num_regions; i++) {
                 in->region_score[i] = score_one_region(scan_params, 
-                                                       &in->bounds[i], quantised, histogram, 
-                                                       &in->pixel_scores[i]);
+                                                       &in->bounds[i],
+                                                       quantised,
+                                                       histogram,
+                                                       &in->pixel_scores[i],
+                                                       &in->region_avg_pixel[i],
+                                                       &in->region_rarity[i],
+                                                       &in->region_fg_rarity[i],
+                                                       &in->avg_pixel
+                                                       );
         }
 }
 
@@ -1793,12 +1840,15 @@ scanner_scan_python(PyObject *self, PyObject *args)
 //		printf("Found a good region, as follows:\n");
 		for (unsigned i=0; i<regions->num_regions; i++) {
 //			printf("--- score: %u\n", regions->region_score[i]);
-			PyObject *t = Py_BuildValue("(fffff)",
+			PyObject *t = Py_BuildValue("(ffffffff)",
 					regions->bounds[i].minx*1.0,
 					regions->bounds[i].miny*1.0,
 					regions->bounds[i].maxx*1.0,
 					regions->bounds[i].maxy*1.0,
-					regions->region_score[i]);
+					regions->region_score[i],
+					regions->region_avg_pixel[i]*1.0,
+					regions->region_rarity[i],
+					regions->region_fg_rarity[i]);
 			PyList_SET_ITEM(list, i, t);
 		}
 	}
@@ -2182,7 +2232,7 @@ struct regions * image_processor(uint16_t width, uint16_t height, PyObject *parm
 	regions->height = height;
 	regions->width = width;
 
-	histogram_quantization(&scan_params, in, quantised, histogram, saveDir);
+	regions->avg_pixel = histogram_quantization(&scan_params, in, quantised, histogram, saveDir);
 	float hct = scan_params.histogram_count_threshold;
 
 	uint32_t min, max;
