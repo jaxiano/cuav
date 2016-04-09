@@ -5,5 +5,5 @@ sleep 5
 #mkdir -p /data/logs
 #mavproxy.py --master=:14550 --aircraft=script/gtest /data
 #/root/.local/bin/mavproxy.py --master=:14550 --aircraft /data
-mavproxy.py --master /dev/ttySAC0 --baudrate 57600 --aircraft /data --out 192.168.168.10:14550
+mavproxy.py --master /dev/ttySAC0 --baudrate 57600 --aircraft /data --out 192.168.168.11:14550
 
